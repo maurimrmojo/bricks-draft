@@ -177,7 +177,7 @@ else:
     
     jugadores_fecha_perfiles = {}
     if presentes:
-        st.subheader("🛠️ Ajuste de Roles para la Fecha (Exclusions de hoy)")
+        st.subheader("🛠️ Ajuste de Roles para la Fecha (Exclusiones de hoy)")
         col_roles_dinamicos = st.columns(3)
         for idx, jug in enumerate(sorted(presentes)):
             col_jug = col_roles_dinamicos[idx % 3]
@@ -499,6 +499,51 @@ else:
                         st.rerun()
                 else:
                     st.write(f"🏃‍♂️ **{jug}** - {rol}")
+
+        # --- SECCIÓN: EXPORTAR A DISCORD (ALINEACIÓN EN PARALELO) ---
+        st.write("---")
+        st.subheader("📢 Compartir Equipos")
+        
+        # Mapeamos los jugadores actuales indexados por su rol asignado
+        dict_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
+        dict_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
+        
+        str_discord = "🏀 **CONVOCATORIA — BRICKS A LA CARTA** 🏀\\n━━━━━━━━━━━━━━━━━━━━━━━━━━\\n 🔵 EQUIPO 1       🆚       🔴 EQUIPO 2   \\n━━━━━━━━━━━━━━━━━━━━━━━━━━\\n```\\n"
+        
+        for pos in roles_totales:
+            j1 = dict_e1.get(pos, "---")
+            j2 = dict_e2.get(pos, "---")
+            # Ajustamos espacios para que quede alineado tipo tabla fija en Discord
+            # El rol ocupa 4 caracteres, el jugador 1 se rellena a 22 caracteres
+            str_discord += f"• [{pos.ljust(2)}] {j1.ljust(22)} • [{pos.ljust(2)}] {j2}\\n"
+            
+        str_discord += "
+```\\n━━━━━━━━━━━━━━━━━━━━━━━━━━\\n🔥 ¡A LA CANCHA! 🔥"
+
+        # Componente inyectado en JS para copiar al portapapeles de manera nativa
+        js_copiar = f"""
+        <div style="text-align: center;">
+            <button id="btnCopy" style="background-color: #5865F2; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                📋 COPIAR ALINEACIONES EN PARALELO PARA DISCORD
+            </button>
+            <p id="msg" style="color: #2ecc71; font-family: sans-serif; font-size: 14px; font-weight: bold; margin-top: 8px; display: none;">
+                ¡Copiado en paralelo! Anda a Discord y apretá CTRL + V
+            </p>
+        </div>
+        <script>
+            document.getElementById("btnCopy").addEventListener("click", () => {{
+                const texto = `{str_discord}`;
+                navigator.clipboard.writeText(texto).then(() => {{
+                    const m = document.getElementById("msg");
+                    m.style.display = "block";
+                    setTimeout(() => {{ m.style.display = "none"; }}, 3000);
+                }}).catch(err => {{
+                    alert("Error al copiar: Asegurate de usar HTTPS o dar permisos");
+                }});
+            }});
+        </script>
+        """
+        components.html(js_copiar, height=85)
                 
         # --- REGISTRO DEL MARCADOR ---
         st.write("---")
