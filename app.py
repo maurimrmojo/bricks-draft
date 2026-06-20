@@ -85,7 +85,7 @@ seccion = st.sidebar.radio("Ir a la ventana:", opciones_menu)
 # =====================================================================
 if seccion == "📋 Roster y Gestión de Fichas (Privado)":
     st.title("📋 Roster Oficial — Draft a la carta")
-    st.subheader("Administración de fichas técnicas de jugadores")
+    st.subheader("Administración de fichas técnicas de jugadores y auditoría de partidos")
     
     col_carga, col_lista = st.columns([1, 2.5])
     
@@ -113,18 +113,42 @@ if seccion == "📋 Roster y Gestión de Fichas (Privado)":
             else:
                 st.error("Escribe un nombre válido.")
                 
-        # --- SECCIÓN ULTRA PROTEGIDA DE CONTROL DE HISTORIAL ---
+        # --- SECCIÓN ULTRA PROTEGIDA DE CONTROL DE HISTORIAL (SUPER-ADMIN) ---
         st.write("---")
         st.header("⚠️ Control de Historial")
         if st.session_state.historial_partidos:
             st.write(f"Partidos registrados: {len(st.session_state.historial_partidos)}")
+            
+            # 1. Borrado clásico del último
             if st.button("🚨 Eliminar Último Partido Cargado", type="secondary", use_container_width=True):
                 partido_borrado = st.session_state.historial_partidos.pop()
                 guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                 st.warning("Se eliminó el último registro correctamente.")
                 st.rerun()
+                
+            # 2. PANEL ANTITROLL: Modificar cualquier partido a antojo
+            st.write(" ")
+            with st.expander("🔧 Modificar CUALQUIER marcador viejo (Filtro Anti-Troll)"):
+                opciones_partidos = [f"Partido #{i+1} - {p['Resultado']}" for i, p in enumerate(st.session_state.historial_partidos)]
+                partido_seleccionado_str = st.selectbox("Elegí el partido a corregir:", opciones_partidos)
+                idx_partido = opciones_partidos.index(partido_seleccionado_str)
+                
+                partido_data = st.session_state.historial_partidos[idx_partido]
+                st.info(f"**Editando:** {partido_data['Equipos']}")
+                
+                admin_edit_col1, admin_edit_col2 = st.columns(2)
+                with admin_edit_col1:
+                    fix_score_1 = st.number_input("Score Real Equipo 1:", min_value=0, value=0, key=f"fix_1_{idx_partido}")
+                with admin_edit_col2:
+                    fix_score_2 = st.number_input("Score Real Equipo 2:", min_value=0, value=0, key=f"fix_2_{idx_partido}")
+                    
+                if st.button("🛠️ Aplicar Corrección Forzada", use_container_width=True, type="primary"):
+                    st.session_state.historial_partidos[idx_partido]["Resultado"] = f"{fix_score_1} - {fix_score_2}"
+                    guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                    st.success(f"¡Partido #{idx_partido+1} corregido por el Administrador!")
+                    st.rerun()
         else:
-            st.info("No hay partidos en el historial para borrar.")
+            st.info("No hay partidos en el historial para gestionar.")
                 
     with col_lista:
         st.header("🪪 Carnets Registrados")
@@ -403,7 +427,7 @@ else:
                                 dibujarRuleta();
                                 requestAnimationFrame(animarGiro);
                             }} else {{
-                                anguloActual = angFinal;
+                                anguloActual = anguloFinal;
                                 dibujarRuleta();
                                 const res = document.getElementById("txtResultado");
                                 res.innerText = "🎯 ¡SELECCIONADO: " + candidatos[idxGanador] + "!";
@@ -500,7 +524,7 @@ else:
                 else:
                     st.write(f"🏃‍♂️ **{jug}** - {rol}")
 
-        # --- SECCIÓN ULTRA SIMPLE PARA DISCORD (RE-FORMATEADA EXÁCTO) ---
+        # --- SECCIÓN ULTRA SIMPLE PARA DISCORD ---
         st.write("---")
         st.subheader("📋 Texto para copiar en Discord")
         
@@ -514,8 +538,6 @@ else:
         for pos in roles_totales:
             j1 = dict_e1.get(pos, "---")
             j2 = dict_e2.get(pos, "---")
-            # Usamos padding a la izquierda ljust() para asegurar columnas fijas
-            # POS: (3 char), JUG1: (15 char), SEPARADOR: (5 char)
             texto_plano += f"{pos.ljust(3)}:   {j1.ljust(15)} -        {j2}\n"
             
         st.code(texto_plano, language="text")
@@ -543,6 +565,23 @@ else:
                 guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                 st.success("¡Partido archivado en la nube!")
                 st.rerun()
+                
+            # --- BOTÓN DE ARREPENTIMIENTO (SOLO ÚLTIMO PARTIDO PARA STREAMERS) ---
+            if st.session_state.historial_partidos:
+                st.write(" ")
+                with st.expander("⚠️ Corregir último marcador cargado (Solo Modificación)"):
+                    st.write("*Si escribiste mal los puntos del último partido, podés arreglarlos acá sin necesidad de borrar el registro:*")
+                    edit_col1, edit_col2 = st.columns(2)
+                    with edit_col1:
+                        nuevo_res_eq1 = st.number_input("Nuevo Score Equipo 1:", min_value=0, value=0, key="edit_r_1")
+                    with edit_col2:
+                        nuevo_res_eq2 = st.number_input("Nuevo Score Equipo 2:", min_value=0, value=0, key="edit_r_2")
+                    
+                    if st.button("🔧 Sobreescribir Marcador", use_container_width=True):
+                        st.session_state.historial_partidos[-1]["Resultado"] = f"{nuevo_res_eq1} - {nuevo_res_eq2}"
+                        guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                        st.success("¡Marcador corregido con éxito!")
+                        st.rerun()
         else:
             st.info("🏃‍♂️ El partido está en juego. Los resultados solo pueden ser cargados por el organizador.")
             
