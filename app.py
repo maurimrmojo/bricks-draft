@@ -403,7 +403,7 @@ else:
                                 dibujarRuleta();
                                 requestAnimationFrame(animarGiro);
                             }} else {{
-                                anguloActual = anguloFinal;
+                                anguloActual = angFinal;
                                 dibujarRuleta();
                                 const res = document.getElementById("txtResultado");
                                 res.innerText = "🎯 ¡SELECCIONADO: " + candidatos[idxGanador] + "!";
@@ -500,19 +500,23 @@ else:
                 else:
                     st.write(f"🏃‍♂️ **{jug}** - {rol}")
 
-        # --- SECCIÓN ULTRA SIMPLE PARA DISCORD ---
+        # --- SECCIÓN ULTRA SIMPLE PARA DISCORD (RE-FORMATEADA EXÁCTO) ---
         st.write("---")
         st.subheader("📋 Texto para copiar en Discord")
         
         dict_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
         dict_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
         
-        texto_plano = "CONVOCATORIA\n"
-        texto_plano += "EQUIPO 1 VS EQUIPO 2\n"
+        # Cabecera
+        texto_plano = "POS --- EQUIPO 1        ---- EQUIPO 2\n"
+        
+        # Cuerpo alineado con padding fijo
         for pos in roles_totales:
             j1 = dict_e1.get(pos, "---")
             j2 = dict_e2.get(pos, "---")
-            texto_plano += f"{pos}: {j1} VS {pos}: {j2}\n"
+            # Usamos padding a la izquierda ljust() para asegurar columnas fijas
+            # POS: (3 char), JUG1: (15 char), SEPARADOR: (5 char)
+            texto_plano += f"{pos.ljust(3)}:   {j1.ljust(15)} -        {j2}\n"
             
         st.code(texto_plano, language="text")
 
