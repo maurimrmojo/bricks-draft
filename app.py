@@ -339,7 +339,6 @@ else:
                             ctx.strokeStyle = "#0e1117";
                             ctx.stroke();
                             
-                            // Dibujar texto del competidor
                             ctx.save();
                             ctx.translate(centro, centro);
                             ctx.rotate(anguloInicio + angularGajo / 2);
@@ -396,8 +395,9 @@ else:
                 """
                 components.html(html_ruleta, height=520)
 
-                st.write("👉 **Confirmación Oficial:** Si ya giraste la ruleta en pantalla y querés asentar al jugador seleccionado en el equipo correspondiente, dale click al botón de abajo:")
-                if st.button(f"📥 Meter a {ganador} como {posicion_a_sortear}", use_container_width=True, type="primary"):
+                # El botón ya no dice el nombre del jugador para mantener el misterio absoluto antes de girar
+                st.write("👉 **Confirmación Oficial:** Una vez que la ruleta se detenga en el stream, presiona el botón de abajo para enviar al seleccionado a su respectivo equipo:")
+                if st.button("📥 Confirmar y agregar seleccionado", use_container_width=True, type="primary"):
                     pts_jugador = jugadores_fecha_perfiles[ganador][posicion_a_sortear]
                     if len(st.session_state.draft_manual["Equipo 1"]) <= len(st.session_state.draft_manual["Equipo 2"]):
                         st.session_state.draft_manual["Equipo 1"].append((ganador, posicion_a_sortear))
