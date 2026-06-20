@@ -48,7 +48,7 @@ st.sidebar.subheader("🔒 Acceso de Seguridad")
 
 password_ingresada = st.sidebar.text_input("Contraseña:", type="password")
 
-# Validación de jerarquías
+# Validation de jerarquías
 es_admin_stream = (password_ingresada == PASSWORD_STREAM or password_ingresada == PASSWORD_MAESTRA)
 es_super_admin = (password_ingresada == PASSWORD_MAESTRA)
 
@@ -500,25 +500,33 @@ else:
                 else:
                     st.write(f"🏃‍♂️ **{jug}** - {rol}")
 
-        # --- SECCIÓN: EXPORTAR A DISCORD (ALINEACIÓN EN PARALELO) ---
+        # --- REGISTRO DEL MARCADOR ---
         st.write("---")
-        st.subheader("📢 Compartir Equipos")
+        st.subheader("📝 Registrar Resultado Final")
         
-        # Mapeamos los jugadores actuales indexados por su rol asignado
-        dict_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
-        dict_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
-        
-        # Construcción segura de la cadena usando saltos nativos de Python sin que se rompa
-        lineas_jugadores = []
-        for pos in roles_totales:
-            j1 = dict_e1.get(pos, "---")
-            j2 = dict_e2.get(pos, "---")
-            # Alineamos el texto de forma prolija para Discord
-            lineas_jugadores.append(f"• [{pos.ljust(2)}] {j1.ljust(22)} • [{pos.ljust(2)}] {j2}")
+        if es_admin_stream:
+            marcador_col1, marcador_col2 = st.columns(2)
+            with marcador_col1:
+                res_eq1 = st.number_input("Puntos Equipo 1:", min_value=0, value=0, key="r_1")
+            with marcador_col2:
+                res_eq2 = st.number_input("Puntos Equipo 2:", min_value=0, value=0, key="r_2")
+                
+            if st.button("💾 Guardar Marcador", use_container_width=True):
+                nombres_e1 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 1"]])
+                nombres_e2 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 2"]])
+                
+                registro = {
+                    "Equipos": f"🔵 ({nombres_e1}) VS 🔴 ({nombres_e2})",
+                    "Resultado": f"{res_eq1} - {res_eq2}"
+                }
+                st.session_state.historial_partidos.append(registro)
+                guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                st.success("¡Partido archivado en la nube!")
+                st.rerun()
+        else:
+            st.info("🏃‍♂️ El partido está en juego. Los resultados solo pueden ser cargados por el organizador.")
             
-        cuerpo_jugadores = "\\n".join(lineas_jugadores)
-        
-        str_discord = f"""🏀 **CONVOCATORIA — BRICKS A LA CARTA** 🏀
-━━━━━━━━━━━━━━━━━━━━━━━━━━
- 🔵 EQUIPO 1       🆚       🔴 EQUIPO 2   
-━━━━━━━━━━━━━━━━━━━━━━━━━━
+        if st.session_state.historial_partidos:
+            st.write("### 📜 Historial de Resultados")
+            for idx, part in enumerate(st.session_state.historial_partidos):
+                st.info(f"**Partido #{idx+1}:** {part['Equipos']} ➔ **Marcador Final: {part['Resultado']}**")
