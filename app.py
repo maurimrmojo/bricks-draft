@@ -9,9 +9,10 @@ import os
 st.set_page_config(page_title="Draft a la carta", layout="wide")
 
 # =====================================================================
-# CONFIGURACIÓN DE SEGURIDAD
+# CONFIGURACIÓN DE SEGURIDAD (DOBLE CLAVE)
 # =====================================================================
-PASSWORD_ADMIN = "bricks2026"
+PASSWORD_STREAM = "bricks2026"        # Clave para operar el stream y la mesa
+PASSWORD_MAESTRA = "bricks2026admin"   # Clave máxima para Roster y Borrados
 ARCHIVO_BD = "datos_draft.json"
 
 # --- FUNCIONES PARA LEER Y GUARDAR EN EL ALMACENAMIENTO PERSISTENTE ---
@@ -43,14 +44,20 @@ if "draft_manual" not in st.session_state:
 
 # --- BARRA LATERAL: LOGIN Y NAVEGACIÓN ---
 st.sidebar.title("🍔 Bricks a la carta")
-st.sidebar.subheader("🔒 Acceso Organizador")
+st.sidebar.subheader("🔒 Acceso de Seguridad")
 
 password_ingresada = st.sidebar.text_input("Contraseña:", type="password")
-es_admin = (password_ingresada == PASSWORD_ADMIN)
+
+# Validación de jerarquías
+es_admin_stream = (password_ingresada == PASSWORD_STREAM or password_ingresada == PASSWORD_MAESTRA)
+es_super_admin = (password_ingresada == PASSWORD_MAESTRA)
 
 ver_puntos = False
-if es_admin:
-    st.sidebar.success("🔓 Permisos de Admin Activos")
+if es_super_admin:
+    st.sidebar.success("👑 Permisos de SUPER-ADMIN Activos")
+    ver_puntos = st.sidebar.toggle("🔧 Optimizar renderizado de streaming (H.264)", value=False)
+elif es_admin_stream:
+    st.sidebar.success("🔓 Permisos de Streamer Activos")
     ver_puntos = st.sidebar.toggle("🔧 Optimizar renderizado de streaming (H.264)", value=False)
 else:
     if password_ingresada:
@@ -66,14 +73,15 @@ if st.sidebar.button("🔄 Sincronizar Datos (F5 Manual)", use_container_width=T
     st.session_state.historial_partidos = datos_actualizados["historial_partidos"]
     st.rerun()
 
+# Menú dinámico según el nivel de seguridad
 opciones_menu = ["🏀 Mesa de Draft"]
-if es_admin:
+if es_super_admin:
     opciones_menu.append("📋 Roster y Gestión de Fichas (Privado)")
 
 seccion = st.sidebar.radio("Ir a la ventana:", opciones_menu)
 
 # =====================================================================
-# VENTANA: ROSTER Y GESTIÓN DE FICHAS (PRIVADO)
+# VENTANA: ROSTER Y GESTIÓN DE FICHAS (SÓLO SUPER-ADMIN)
 # =====================================================================
 if seccion == "📋 Roster y Gestión de Fichas (Privado)":
     st.title("📋 Roster Oficial — Draft a la carta")
@@ -104,6 +112,19 @@ if seccion == "📋 Roster y Gestión de Fichas (Privado)":
                     st.error("Ponle al menos una posición válida.")
             else:
                 st.error("Escribe un nombre válido.")
+                
+        # --- SECCIÓN ULTRA PROTEGIDA DE CONTROL DE HISTORIAL ---
+        st.write("---")
+        st.header("⚠️ Control de Historial")
+        if st.session_state.historial_partidos:
+            st.write(f"Partidos registrados: {len(st.session_state.historial_partidos)}")
+            if st.button("🚨 Eliminar Último Partido Cargado", type="secondary", use_container_width=True):
+                partido_borrado = st.session_state.historial_partidos.pop()
+                guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                st.warning("Se eliminó el último registro correctamente.")
+                st.rerun()
+        else:
+            st.info("No hay partidos en el historial para borrar.")
                 
     with col_lista:
         st.header("🪪 Carnets Registrados")
@@ -136,14 +157,14 @@ else:
     st.header("🎲 Convocatoria del Día")
     
     if not st.session_state.jugadores:
-        st.warning("⚠️ Primero debes iniciar sesión como Admin de Bricks e ir a la sección '📋 Roster' para cargar a tus jugadores.")
+        st.warning("⚠️ Primero debes iniciar sesión con la clave Maestra e ir a '📋 Roster' para cargar jugadores.")
         presentes = []
     else:
         presentes = []
         columnas_check = st.columns(4)
         for i, jug in enumerate(sorted(st.session_state.jugadores.keys())):
             with columnas_check[i % 4]:
-                if es_admin:
+                if es_admin_stream:
                     if st.checkbox(f"✔️ {jug}", key=f"p_{jug}"):
                         presentes.append(jug)
                 else:
@@ -156,7 +177,7 @@ else:
     
     jugadores_fecha_perfiles = {}
     if presentes:
-        st.subheader("🛠️ Ajuste de Roles para la Fecha (Exclusiones de hoy)")
+        st.subheader("🛠️ Ajuste de Roles para la Fecha (Exclusions de hoy)")
         col_roles_dinamicos = st.columns(3)
         for idx, jug in enumerate(sorted(presentes)):
             col_jug = col_roles_dinamicos[idx % 3]
@@ -167,7 +188,7 @@ else:
                     
                     roles_activos_hoy = []
                     for pos in pos_originales:
-                        if es_admin:
+                        if es_admin_stream:
                             if st.checkbox(f"Habilitar {pos}", value=True, key=f"rol_{jug}_{pos}"):
                                 roles_activos_hoy.append(pos)
                         else:
@@ -188,13 +209,13 @@ else:
     pos_cubiertas_eq1 = [j[1] for j in st.session_state.draft_manual["Equipo 1"]]
     pos_cubiertas_eq2 = [j[1] for j in st.session_state.draft_manual["Equipo 2"]]
 
-    if es_admin:
+    if es_admin_stream:
         pestana1, pestana2 = st.tabs(["🎯 Sorteo Automático Completo", "🎡 Ruleta Interactiva y Manual"])
         
         with pestana1:
             if st.button("🚀 Lanzar Sorteo Automático Balanced", type="primary", use_container_width=True):
                 if len(presentes) < 10:
-                    st.warning("Faltan convocados. Se necesitan mínimo 10 jugadores para balancear los equipos.")
+                    st.warning("Faltan convocados. Se necesitan mínimo 10 jugadores.")
                 else:
                     pool = presentes.copy()
                     mejor_comb = None
@@ -395,7 +416,6 @@ else:
                 """
                 components.html(html_ruleta, height=520)
 
-                # El botón ya no dice el nombre del jugador para mantener el misterio absoluto antes de girar
                 st.write("👉 **Confirmación Oficial:** Una vez que la ruleta se detenga en el stream, presiona el botón de abajo para enviar al seleccionado a su respectivo equipo:")
                 if st.button("📥 Confirmar y agregar seleccionado", use_container_width=True, type="primary"):
                     pts_jugador = jugadores_fecha_perfiles[ganador][posicion_a_sortear]
@@ -453,7 +473,7 @@ else:
             st.subheader(sub_e1)
             for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 1"]):
                 pts = st.session_state.jugadores[jug].get(rol, 0)
-                if es_admin:
+                if es_admin_stream:
                     c_inf, c_btn = st.columns([4, 1])
                     txt_jugador = f"🏃‍♂️ **{jug}** - {rol} ({pts} pts)" if ver_puntos else f"🏃‍♂️ **{jug}** - {rol}"
                     c_inf.write(txt_jugador)
@@ -469,7 +489,7 @@ else:
             st.subheader(sub_e2)
             for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 2"]):
                 pts = st.session_state.jugadores[jug].get(rol, 0)
-                if es_admin:
+                if es_admin_stream:
                     c_inf, c_btn = st.columns([4, 1])
                     txt_jugador = f"🏃‍♂️ **{jug}** - {rol} ({pts} pts)" if ver_puntos else f"🏃‍♂️ **{jug}** - {rol}"
                     c_inf.write(txt_jugador)
@@ -484,7 +504,7 @@ else:
         st.write("---")
         st.subheader("📝 Registrar Resultado Final")
         
-        if es_admin:
+        if es_admin_stream:
             marcador_col1, marcador_col2 = st.columns(2)
             with marcador_col1:
                 res_eq1 = st.number_input("Puntos Equipo 1:", min_value=0, value=0, key="r_1")
