@@ -508,70 +508,17 @@ else:
         dict_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
         dict_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
         
-        str_discord = "🏀 **CONVOCATORIA — BRICKS A LA CARTA** 🏀\\n━━━━━━━━━━━━━━━━━━━━━━━━━━\\n 🔵 EQUIPO 1       🆚       🔴 EQUIPO 2   \\n━━━━━━━━━━━━━━━━━━━━━━━━━━\\n```\\n"
-        
+        # Construcción segura de la cadena usando saltos nativos de Python sin que se rompa
+        lineas_jugadores = []
         for pos in roles_totales:
             j1 = dict_e1.get(pos, "---")
             j2 = dict_e2.get(pos, "---")
-            # Ajustamos espacios para que quede alineado tipo tabla fija en Discord
-            # El rol ocupa 4 caracteres, el jugador 1 se rellena a 22 caracteres
-            str_discord += f"• [{pos.ljust(2)}] {j1.ljust(22)} • [{pos.ljust(2)}] {j2}\\n"
+            # Alineamos el texto de forma prolija para Discord
+            lineas_jugadores.append(f"• [{pos.ljust(2)}] {j1.ljust(22)} • [{pos.ljust(2)}] {j2}")
             
-        str_discord += "
-```\\n━━━━━━━━━━━━━━━━━━━━━━━━━━\\n🔥 ¡A LA CANCHA! 🔥"
-
-        # Componente inyectado en JS para copiar al portapapeles de manera nativa
-        js_copiar = f"""
-        <div style="text-align: center;">
-            <button id="btnCopy" style="background-color: #5865F2; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-                📋 COPIAR ALINEACIONES EN PARALELO PARA DISCORD
-            </button>
-            <p id="msg" style="color: #2ecc71; font-family: sans-serif; font-size: 14px; font-weight: bold; margin-top: 8px; display: none;">
-                ¡Copiado en paralelo! Anda a Discord y apretá CTRL + V
-            </p>
-        </div>
-        <script>
-            document.getElementById("btnCopy").addEventListener("click", () => {{
-                const texto = `{str_discord}`;
-                navigator.clipboard.writeText(texto).then(() => {{
-                    const m = document.getElementById("msg");
-                    m.style.display = "block";
-                    setTimeout(() => {{ m.style.display = "none"; }}, 3000);
-                }}).catch(err => {{
-                    alert("Error al copiar: Asegurate de usar HTTPS o dar permisos");
-                }});
-            }});
-        </script>
-        """
-        components.html(js_copiar, height=85)
-                
-        # --- REGISTRO DEL MARCADOR ---
-        st.write("---")
-        st.subheader("📝 Registrar Resultado Final")
+        cuerpo_jugadores = "\\n".join(lineas_jugadores)
         
-        if es_admin_stream:
-            marcador_col1, marcador_col2 = st.columns(2)
-            with marcador_col1:
-                res_eq1 = st.number_input("Puntos Equipo 1:", min_value=0, value=0, key="r_1")
-            with marcador_col2:
-                res_eq2 = st.number_input("Puntos Equipo 2:", min_value=0, value=0, key="r_2")
-                
-            if st.button("💾 Guardar Marcador", use_container_width=True):
-                nombres_e1 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 1"]])
-                nombres_e2 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 2"]])
-                
-                registro = {
-                    "Equipos": f"🔵 ({nombres_e1}) VS 🔴 ({nombres_e2})",
-                    "Resultado": f"{res_eq1} - {res_eq2}"
-                }
-                st.session_state.historial_partidos.append(registro)
-                guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                st.success("¡Partido archivado en la nube!")
-                st.rerun()
-        else:
-            st.info("🏃‍♂️ El partido está en juego. Los resultados solo pueden ser cargados por el organizador.")
-            
-        if st.session_state.historial_partidos:
-            st.write("### 📜 Historial de Resultados")
-            for idx, part in enumerate(st.session_state.historial_partidos):
-                st.info(f"**Partido #{idx+1}:** {part['Equipos']} ➔ **Marcador Final: {part['Resultado']}**")
+        str_discord = f"""🏀 **CONVOCATORIA — BRICKS A LA CARTA** 🏀
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 🔵 EQUIPO 1       🆚       🔴 EQUIPO 2   
+━━━━━━━━━━━━━━━━━━━━━━━━━━
