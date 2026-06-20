@@ -500,6 +500,22 @@ else:
                 else:
                     st.write(f"🏃‍♂️ **{jug}** - {rol}")
 
+        # --- SECCIÓN ULTRA SIMPLE PARA DISCORD ---
+        st.write("---")
+        st.subheader("📋 Texto para copiar en Discord")
+        
+        dict_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
+        dict_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
+        
+        texto_plano = "CONVOCATORIA\n"
+        texto_plano += "EQUIPO 1 VS EQUIPO 2\n"
+        for pos in roles_totales:
+            j1 = dict_e1.get(pos, "---")
+            j2 = dict_e2.get(pos, "---")
+            texto_plano += f"{pos}: {j1} VS {pos}: {j2}\n"
+            
+        st.code(texto_plano, language="text")
+
         # --- REGISTRO DEL MARCADOR ---
         st.write("---")
         st.subheader("📝 Registrar Resultado Final")
