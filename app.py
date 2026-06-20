@@ -285,19 +285,15 @@ else:
             if candidatos:
                 st.markdown(f"**Disponibles en el bombo:** {', '.join(candidatos)}")
                 
-                # --- INYECCIÓN DE LA RULETA INTERACTIVA (HTML5 CANVAS) ---
-                # Elegimos el ganador en el servidor para mantener la consistencia y calculamos su ángulo en JS
                 if "ganador_ruleta" not in st.session_state:
                     st.session_state.ganador_ruleta = None
 
-                # Generamos una lista de colores llamativos para los gajos
                 colores_gajos = ["#FF4B4B", "#1f77b4", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#e377c2", "#bcbd22"]
                 lista_colores = [colores_gajos[i % len(colores_gajos)] for i in range(len(candidatos))]
                 
                 json_candidatos = json.dumps(candidatos)
                 json_colores = json.dumps(lista_colores)
                 
-                # Elegir el ganador de antemano si el usuario le da al botón de control de Streamlit
                 if st.button("🔮 Preparar y Sincronizar Ruleta", use_container_width=True):
                     st.session_state.ganador_ruleta = random.choice(candidatos)
                 
@@ -307,7 +303,6 @@ else:
                 html_ruleta = f"""
                 <div style="text-align: center; font-family: sans-serif; background-color: #0e1117; color: white; padding: 15px; border-radius: 10px;">
                     <div style="position: relative; display: inline-block;">
-                        <!-- Puntero indicador de la ruleta -->
                         <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 25px solid #FF4B4B; z-index: 10;"></div>
                         <canvas id="canvasRuleta" width="380" height="380" style="border: 4px solid #31333F; border-radius: 50%; box-shadow: 0 0 15px rgba(0,0,0,0.5);"></canvas>
                     </div>
@@ -335,7 +330,6 @@ else:
                             const anguloInicio = anguloActual + (i * angularGajo);
                             const anguloFin = anguloInicio + angularGajo;
                             
-                            // Dibujar gajo
                             ctx.beginPath();
                             ctx.moveTo(centro, centro);
                             ctx.arc(centro, centro, centro - 5, anguloInicio, anguloFin);
@@ -345,7 +339,7 @@ else:
                             ctx.strokeStyle = "#0e1117";
                             ctx.stroke();
                             
-                            # Dibujar texto del competidor
+                            // Dibujar texto del competidor
                             ctx.save();
                             ctx.translate(centro, centro);
                             ctx.rotate(anguloInicio + angularGajo / 2);
@@ -356,7 +350,6 @@ else:
                             ctx.restore();
                         }}
                         
-                        // Centro estético de la ruleta
                         ctx.beginPath();
                         ctx.arc(centro, centro, 25, 0, 2 * Math.PI);
                         ctx.fillStyle = "#31333F";
@@ -373,20 +366,18 @@ else:
                         document.getElementById("btnGirar").style.opacity = "0.5";
                         document.getElementById("txtResultado").style.color = "#0e1117";
                         
-                        // Cálculo preciso del ángulo final para que el puntero (arriba, -90 grados o 1.5 * PI) marque exactamente el ganador simulado
                         const vueltasCompletas = 5 + Math.floor(Math.random() * 3);
                         const anguloObjetivoGajo = 1.5 * Math.PI - (idxGanador * angularGajo) - (angularGajo / 2);
                         const anguloFinal = (vueltasCompletas * 2 * Math.PI) + anguloObjetivoGajo;
                         
                         let inicioTiempo = null;
-                        const duracionGiro = 4500; // 4.5 segundos de pura tensión
+                        const duracionGiro = 4500;
                         
                         function animarGiro(tiempoActual) {{
                             if (!inicioTiempo) inicioTiempo = tiempoActual;
                             const progreso = (tiempoActual - inicioTiempo) / duracionGiro;
                             
                             if (progreso < 1) {{
-                                // Curva de desaceleración tipo Ease-Out
                                 const factorDesaceleracion = 1 - Math.pow(1 - progreso, 3);
                                 anguloActual = factorDesaceleracion * anguloFinal;
                                 dibujarRuleta();
@@ -405,7 +396,6 @@ else:
                 """
                 components.html(html_ruleta, height=520)
 
-                # --- PANEL DE CONFIRMACIÓN DE LA RULETA EN STREAM ---
                 st.write("👉 **Confirmación Oficial:** Si ya giraste la ruleta en pantalla y querés asentar al jugador seleccionado en el equipo correspondiente, dale click al botón de abajo:")
                 if st.button(f"📥 Meter a {ganador} como {posicion_a_sortear}", use_container_width=True, type="primary"):
                     pts_jugador = jugadores_fecha_perfiles[ganador][posicion_a_sortear]
@@ -415,7 +405,7 @@ else:
                     else:
                         st.session_state.draft_manual["Equipo 2"].append((ganador, posicion_a_sortear))
                         st.session_state.draft_manual["Suma 2"] += pts_jugador
-                    st.session_state.ganador_ruleta = None  # Limpiamos el cache para el próximo tiro
+                    st.session_state.ganador_ruleta = None
                     st.rerun()
             else:
                 st.markdown(f"⚠️ *No quedan jugadores viables habilitados para ocupar el rol de {posicion_a_sortear}.*")
