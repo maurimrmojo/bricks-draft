@@ -1,35 +1,56 @@
 import streamlit as st
 import random
 import time
+import json
+import os
 
 # Configuración de la página web
 st.set_page_config(page_title="Draft a la carta", layout="wide")
 
 # =====================================================================
-# CONFIGURACIÓN DE SEGURIDAD (Cambiá la contraseña acá si querés)
+# CONFIGURACIÓN DE SEGURIDAD
 # =====================================================================
 PASSWORD_ADMIN = "bricks2026"
+ARCHIVO_BD = "datos_draft.json"
 
-# --- MEMORIA DEL PROGRAMA (PERSISTENTE) ---
-# Arranca completamente vacío para cargar desde cero
+# --- FUNCIONES PARA LEER Y GUARDAR EN EL ALMACENAMIENTO PERSISTENTE ---
+def cargar_datos_globales():
+    """Lee los datos del archivo local (que en Streamlit Cloud es persistente entre usuarios)."""
+    if os.path.exists(ARCHIVO_BD):
+        try:
+            with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    # Si no existe o falla, devuelve la estructura vacía por defecto
+    return {"jugadores": {}, "historial_partidos": []}
+
+def guardar_datos_globales(jugadores, historial):
+    """Guarda los datos en el archivo para que queden grabados a fuego."""
+    datos = {"jugadores": jugadores, "historial_partidos": historial}
+    with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=4)
+
+# --- CARGA INICIAL DE DATOS ---
+datos_guardados = cargar_datos_globales()
+
+# Sincronizamos la base de datos de la nube con la sesión actual del navegador
 if "jugadores" not in st.session_state:
-    st.session_state.jugadores = {}
+    st.session_state.jugadores = datos_guardados["jugadores"]
+
+if "historial_partidos" not in st.session_state:
+    st.session_state.historial_partidos = datos_guardados["historial_partidos"]
 
 if "draft_manual" not in st.session_state:
     st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
-
-if "historial_partidos" not in st.session_state:
-    st.session_state.historial_partidos = []
 
 # --- BARRA LATERAL: LOGIN Y NAVEGACIÓN ---
 st.sidebar.title("🍔 Bricks a la carta")
 st.sidebar.subheader("🔒 Acceso Organizador")
 
-# Campo de contraseña
 password_ingresada = st.sidebar.text_input("Contraseña:", type="password")
 es_admin = (password_ingresada == PASSWORD_ADMIN)
 
-# Control de revelación de puntos (Camuflado para que no sospechen en stream)
 ver_puntos = False
 if es_admin:
     st.sidebar.success("🔓 Permisos de Admin Activos")
@@ -41,7 +62,14 @@ else:
 
 st.sidebar.write("---")
 
-# Filtro de opciones de navegación según si es admin o no
+# Botón para que los espectadores/amigo actualicen si vos cargaste algo nuevo
+if st.sidebar.button("🔄 Sincronizar Datos (F5 Manual)", use_container_width=True):
+    st.cache_data.clear()
+    datos_actualizados = cargar_datos_globales()
+    st.session_state.jugadores = datos_actualizados["jugadores"]
+    st.session_state.historial_partidos = datos_actualizados["historial_partidos"]
+    st.rerun()
+
 opciones_menu = ["🏀 Mesa de Draft"]
 if es_admin:
     opciones_menu.append("📋 Roster y Gestión de Fichas (Privado)")
@@ -49,7 +77,7 @@ if es_admin:
 seccion = st.sidebar.radio("Ir a la ventana:", opciones_menu)
 
 # =====================================================================
-# VENTANA: ROSTER Y GESTIÓN DE FICHAS (SOLO ACCESIBLE SI ES ADMIN)
+# VENTANA: ROSTER Y GESTIÓN DE FICHAS (PRIVADO)
 # =====================================================================
 if seccion == "📋 Roster y Gestión de Fichas (Privado)":
     st.title("📋 Roster Oficial — Draft a la carta")
@@ -73,7 +101,9 @@ if seccion == "📋 Roster y Gestión de Fichas (Privado)":
                 perfil = {pos: val for pos, val in [("PG", pg), ("SG", sg), ("SF", sf), ("PF", pf), ("C", c)] if val > 0}
                 if perfil:
                     st.session_state.jugadores[nombre] = perfil
-                    st.success(f"¡{nombre} actualizado exitosamente!")
+                    # GUARDADO PERSISTENTE EN LA NUBE
+                    guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                    st.success(f"¡{nombre} guardado permanentemente!")
                     st.rerun()
                 else:
                     st.error("Ponle al menos una posición válida.")
@@ -83,7 +113,7 @@ if seccion == "📋 Roster y Gestión de Fichas (Privado)":
     with col_lista:
         st.header("🪪 Carnets Registrados")
         if not st.session_state.jugadores:
-            st.info("No hay jugadores cargados en el roster todavía. ¡Agrega el primero a la izquierda!")
+            st.info("No hay jugadores cargados en el roster todavía.")
         else:
             columnas_roster = st.columns(3)
             for idx, (jug, posiciones) in enumerate(sorted(st.session_state.jugadores.items())):
@@ -98,6 +128,8 @@ if seccion == "📋 Roster y Gestión de Fichas (Privado)":
                         
                         if st.button("🗑️ Eliminar", key=f"del_{jug}"):
                             del st.session_state.jugadores[jug]
+                            # GUARDADO PERSISTENTE EN LA NUBE AL ELIMINAR
+                            guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                             st.rerun()
 
 # =====================================================================
@@ -107,11 +139,10 @@ else:
     st.title("🏀 Draft a la carta")
     st.subheader("Convocatoria diaria, sorteos y streaming oficial")
 
-    # 1. Convocatoria del Día
     st.header("🎲 Convocatoria del Día")
     
     if not st.session_state.jugadores:
-        st.warning("⚠️ Primero debes iniciar sesión como Admin e ir a la sección '📋 Roster' para cargar a tus jugadores.")
+        st.warning("⚠️ Primero debes iniciar sesión como Admin de Bricks e ir a la sección '📋 Roster' para cargar a tus jugadores.")
         presentes = []
     else:
         presentes = []
@@ -129,13 +160,9 @@ else:
         st.write(f"**Conectados hoy:** {len(presentes)} jugadores.")
     st.write("---")
     
-    # --- AJUSTE DINÁMICO DE POSICIONES PARA LA FECHA ---
     jugadores_fecha_perfiles = {}
-    
     if presentes:
         st.subheader("🛠️ Ajuste de Roles para la Fecha (Exclusiones de hoy)")
-        st.write("Si alguien no quiere o no puede jugar en alguna posición hoy, destildala acá abajo:")
-        
         col_roles_dinamicos = st.columns(3)
         for idx, jug in enumerate(sorted(presentes)):
             col_jug = col_roles_dinamicos[idx % 3]
@@ -170,7 +197,6 @@ else:
     if es_admin:
         pestana1, pestana2 = st.tabs(["🎯 Sorteo Automático Completo", "🎡 Ruleta y Selección Manual"])
         
-        # --- PESTAÑA 1: AUTOMÁTICO COMPLETO ---
         with pestana1:
             if st.button("🚀 Lanzar Sorteo Automático Balanced", type="primary", use_container_width=True):
                 if len(presentes) < 10:
@@ -223,7 +249,6 @@ else:
                     else:
                         st.error("No hay una combinación perfecta con las restricciones actuales.")
 
-        # --- PESTAÑA 2: RULETA Y MANUAL ---
         with pestana2:
             st.write("### 1. Sorteo por Posición Específica")
             posicion_a_sortear = st.selectbox("Elegí qué posición vas a sortear en la ruleta:", roles_totales)
@@ -314,8 +339,6 @@ else:
                             st.session_state.draft_manual["Equipo 2"].append((jugador_manual, rol_manual))
                             st.session_state.draft_manual["Suma 2"] += pts_jugador
                         st.rerun()
-            else:
-                st.info("Todos los presentes están asignados.")
 
             if st.button("❌ Reiniciar Tablas de Equipos", type="secondary"):
                 st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
@@ -333,7 +356,6 @@ else:
         with col_eq1:
             sub_e1 = f"🔵 EQUIPO 1 (Global: {st.session_state.draft_manual['Suma 1']})" if ver_puntos else "🔵 EQUIPO 1"
             st.subheader(sub_e1)
-            
             for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 1"]):
                 pts = st.session_state.jugadores[jug].get(rol, 0)
                 if es_admin:
@@ -350,7 +372,6 @@ else:
         with col_eq2:
             sub_e2 = f"🔴 EQUIPO 2 (Global: {st.session_state.draft_manual['Suma 2']})" if ver_puntos else "🔴 EQUIPO 2"
             st.subheader(sub_e2)
-            
             for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 2"]):
                 pts = st.session_state.jugadores[jug].get(rol, 0)
                 if es_admin:
@@ -384,7 +405,10 @@ else:
                     "Resultado": f"{res_eq1} - {res_eq2}"
                 }
                 st.session_state.historial_partidos.append(registro)
-                st.success("¡Partido archivado!")
+                # GUARDADO PERSISTENTE EN LA NUBE AL AGREGAR PARTIDO
+                guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                st.success("¡Partido archivado en la nube!")
+                st.rerun()
         else:
             st.info("🏃‍♂️ El partido está en juego. Los resultados solo pueden ser cargados por el organizador.")
             
