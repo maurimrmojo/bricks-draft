@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import random
 import time
 import json
@@ -15,18 +16,15 @@ ARCHIVO_BD = "datos_draft.json"
 
 # --- FUNCIONES PARA LEER Y GUARDAR EN EL ALMACENAMIENTO PERSISTENTE ---
 def cargar_datos_globales():
-    """Lee los datos del archivo local (que en Streamlit Cloud es persistente entre usuarios)."""
     if os.path.exists(ARCHIVO_BD):
         try:
             with open(ARCHIVO_BD, "r", encoding="utf-8") as f:
                 return json.load(f)
         except:
             pass
-    # Si no existe o falla, devuelve la estructura vacía por defecto
     return {"jugadores": {}, "historial_partidos": []}
 
 def guardar_datos_globales(jugadores, historial):
-    """Guarda los datos en el archivo para que queden grabados a fuego."""
     datos = {"jugadores": jugadores, "historial_partidos": historial}
     with open(ARCHIVO_BD, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=4)
@@ -34,7 +32,6 @@ def guardar_datos_globales(jugadores, historial):
 # --- CARGA INICIAL DE DATOS ---
 datos_guardados = cargar_datos_globales()
 
-# Sincronizamos la base de datos de la nube con la sesión actual del navegador
 if "jugadores" not in st.session_state:
     st.session_state.jugadores = datos_guardados["jugadores"]
 
@@ -62,7 +59,6 @@ else:
 
 st.sidebar.write("---")
 
-# Botón para que los espectadores/amigo actualicen si vos cargaste algo nuevo
 if st.sidebar.button("🔄 Sincronizar Datos (F5 Manual)", use_container_width=True):
     st.cache_data.clear()
     datos_actualizados = cargar_datos_globales()
@@ -101,7 +97,6 @@ if seccion == "📋 Roster y Gestión de Fichas (Privado)":
                 perfil = {pos: val for pos, val in [("PG", pg), ("SG", sg), ("SF", sf), ("PF", pf), ("C", c)] if val > 0}
                 if perfil:
                     st.session_state.jugadores[nombre] = perfil
-                    # GUARDADO PERSISTENTE EN LA NUBE
                     guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                     st.success(f"¡{nombre} guardado permanentemente!")
                     st.rerun()
@@ -128,12 +123,11 @@ if seccion == "📋 Roster y Gestión de Fichas (Privado)":
                         
                         if st.button("🗑️ Eliminar", key=f"del_{jug}"):
                             del st.session_state.jugadores[jug]
-                            # GUARDADO PERSISTENTE EN LA NUBE AL ELIMINAR
                             guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                             st.rerun()
 
 # =====================================================================
-# VENTANA: PANEL DE CONTROL, CONVOCATORIA Y RULETA
+# VENTANA: PANEL DE CONTROL, CONVOCATORIA Y RULETA VISUAL
 # =====================================================================
 else:
     st.title("🏀 Draft a la carta")
@@ -195,7 +189,7 @@ else:
     pos_cubiertas_eq2 = [j[1] for j in st.session_state.draft_manual["Equipo 2"]]
 
     if es_admin:
-        pestana1, pestana2 = st.tabs(["🎯 Sorteo Automático Completo", "🎡 Ruleta y Selección Manual"])
+        pestana1, pestana2 = st.tabs(["🎯 Sorteo Automático Completo", "🎡 Ruleta Interactiva y Manual"])
         
         with pestana1:
             if st.button("🚀 Lanzar Sorteo Automático Balanced", type="primary", use_container_width=True):
@@ -250,8 +244,8 @@ else:
                         st.error("No hay una combinación perfecta con las restricciones actuales.")
 
         with pestana2:
-            st.write("### 1. Sorteo por Posición Específica")
-            posicion_a_sortear = st.selectbox("Elegí qué posición vas a sortear en la ruleta:", roles_totales)
+            st.write("### 1. Sorteo por Ruleta Gráfica 🎡")
+            posicion_a_sortear = st.selectbox("Elegí qué posición vas a sortear hoy:", roles_totales)
             
             def es_seguro_elegir(jugador_test, pos_test):
                 libres_simulados = [j for j in libres_hoy if j != jugador_test]
@@ -289,32 +283,143 @@ else:
                         candidatos.append(j)
 
             if candidatos:
-                st.markdown(f"**Disponibles para {posicion_a_sortear} ahora:** {', '.join(candidatos)}")
+                st.markdown(f"**Disponibles en el bombo:** {', '.join(candidatos)}")
+                
+                # --- INYECCIÓN DE LA RULETA INTERACTIVA (HTML5 CANVAS) ---
+                # Elegimos el ganador en el servidor para mantener la consistencia y calculamos su ángulo en JS
+                if "ganador_ruleta" not in st.session_state:
+                    st.session_state.ganador_ruleta = None
+
+                # Generamos una lista de colores llamativos para los gajos
+                colores_gajos = ["#FF4B4B", "#1f77b4", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#e377c2", "#bcbd22"]
+                lista_colores = [colores_gajos[i % len(colores_gajos)] for i in range(len(candidatos))]
+                
+                json_candidatos = json.dumps(candidatos)
+                json_colores = json.dumps(lista_colores)
+                
+                # Elegir el ganador de antemano si el usuario le da al botón de control de Streamlit
+                if st.button("🔮 Preparar y Sincronizar Ruleta", use_container_width=True):
+                    st.session_state.ganador_ruleta = random.choice(candidatos)
+                
+                ganador = st.session_state.ganador_ruleta if st.session_state.ganador_ruleta in candidatos else candidatos[0]
+                idx_ganador = candidatos.index(ganador)
+
+                html_ruleta = f"""
+                <div style="text-align: center; font-family: sans-serif; background-color: #0e1117; color: white; padding: 15px; border-radius: 10px;">
+                    <div style="position: relative; display: inline-block;">
+                        <!-- Puntero indicador de la ruleta -->
+                        <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 25px solid #FF4B4B; z-index: 10;"></div>
+                        <canvas id="canvasRuleta" width="380" height="380" style="border: 4px solid #31333F; border-radius: 50%; box-shadow: 0 0 15px rgba(0,0,0,0.5);"></canvas>
+                    </div>
+                    <br><br>
+                    <button id="btnGirar" style="background-color: #FF4B4B; color: white; border: none; padding: 12px 35px; font-size: 18px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🎡 ¡GIRAR EN STREAM! 🎡</button>
+                    <h2 id="txtResultado" style="margin-top: 15px; color: #0e1117; min-height: 35px; transition: color 0.5s;">.</h2>
+                </div>
+
+                <script>
+                    const candidatos = {json_candidatos};
+                    const colores = {json_colores};
+                    const idxGanador = {idx_ganador};
+                    
+                    const canvas = document.getElementById("canvasRuleta");
+                    const ctx = canvas.getContext("2d");
+                    const numGajos = candidatos.length;
+                    const angularGajo = (2 * Math.PI) / numGajos;
+                    let anguloActual = 0;
+                    
+                    function dibujarRuleta() {{
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        const centro = canvas.width / 2;
+                        
+                        for (let i = 0; i < numGajos; i++) {{
+                            const anguloInicio = anguloActual + (i * angularGajo);
+                            const anguloFin = anguloInicio + angularGajo;
+                            
+                            // Dibujar gajo
+                            ctx.beginPath();
+                            ctx.moveTo(centro, centro);
+                            ctx.arc(centro, centro, centro - 5, anguloInicio, anguloFin);
+                            ctx.fillStyle = colores[i];
+                            ctx.fill();
+                            ctx.lineWidth = 2;
+                            ctx.strokeStyle = "#0e1117";
+                            ctx.stroke();
+                            
+                            # Dibujar texto del competidor
+                            ctx.save();
+                            ctx.translate(centro, centro);
+                            ctx.rotate(anguloInicio + angularGajo / 2);
+                            ctx.textAlign = "right";
+                            ctx.fillStyle = "white";
+                            ctx.font = "bold 14px sans-serif";
+                            ctx.fillText(candidatos[i], centro - 20, 5);
+                            ctx.restore();
+                        }}
+                        
+                        // Centro estético de la ruleta
+                        ctx.beginPath();
+                        ctx.arc(centro, centro, 25, 0, 2 * Math.PI);
+                        ctx.fillStyle = "#31333F";
+                        ctx.fill();
+                        ctx.strokeStyle = "white";
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }}
+
+                    dibujarRuleta();
+
+                    document.getElementById("btnGirar").addEventListener("click", () => {{
+                        document.getElementById("btnGirar").disabled = true;
+                        document.getElementById("btnGirar").style.opacity = "0.5";
+                        document.getElementById("txtResultado").style.color = "#0e1117";
+                        
+                        // Cálculo preciso del ángulo final para que el puntero (arriba, -90 grados o 1.5 * PI) marque exactamente el ganador simulado
+                        const vueltasCompletas = 5 + Math.floor(Math.random() * 3);
+                        const anguloObjetivoGajo = 1.5 * Math.PI - (idxGanador * angularGajo) - (angularGajo / 2);
+                        const anguloFinal = (vueltasCompletas * 2 * Math.PI) + anguloObjetivoGajo;
+                        
+                        let inicioTiempo = null;
+                        const duracionGiro = 4500; // 4.5 segundos de pura tensión
+                        
+                        function animarGiro(tiempoActual) {{
+                            if (!inicioTiempo) inicioTiempo = tiempoActual;
+                            const progreso = (tiempoActual - inicioTiempo) / duracionGiro;
+                            
+                            if (progreso < 1) {{
+                                // Curva de desaceleración tipo Ease-Out
+                                const factorDesaceleracion = 1 - Math.pow(1 - progreso, 3);
+                                anguloActual = factorDesaceleracion * anguloFinal;
+                                dibujarRuleta();
+                                requestAnimationFrame(animarGiro);
+                            }} else {{
+                                anguloActual = anguloFinal;
+                                dibujarRuleta();
+                                const res = document.getElementById("txtResultado");
+                                res.innerText = "🎯 ¡SELECCIONADO: " + candidatos[idxGanador] + "!";
+                                res.style.color = "#2ecc71";
+                            }}
+                        }}
+                        requestAnimationFrame(animarGiro);
+                    }});
+                </script>
+                """
+                components.html(html_ruleta, height=520)
+
+                # --- PANEL DE CONFIRMACIÓN DE LA RULETA EN STREAM ---
+                st.write("👉 **Confirmación Oficial:** Si ya giraste la ruleta en pantalla y querés asentar al jugador seleccionado en el equipo correspondiente, dale click al botón de abajo:")
+                if st.button(f"📥 Meter a {ganador} como {posicion_a_sortear}", use_container_width=True, type="primary"):
+                    pts_jugador = jugadores_fecha_perfiles[ganador][posicion_a_sortear]
+                    if len(st.session_state.draft_manual["Equipo 1"]) <= len(st.session_state.draft_manual["Equipo 2"]):
+                        st.session_state.draft_manual["Equipo 1"].append((ganador, posicion_a_sortear))
+                        st.session_state.draft_manual["Suma 1"] += pts_jugador
+                    else:
+                        st.session_state.draft_manual["Equipo 2"].append((ganador, posicion_a_sortear))
+                        st.session_state.draft_manual["Suma 2"] += pts_jugador
+                    st.session_state.ganador_ruleta = None  # Limpiamos el cache para el próximo tiro
+                    st.rerun()
             else:
                 st.markdown(f"⚠️ *No quedan jugadores viables habilitados para ocupar el rol de {posicion_a_sortear}.*")
             
-            if st.button("🎡 ¡Girar Ruleta para esta posición!", use_container_width=True):
-                if not candidatos:
-                    st.error("No hay candidatos viables.")
-                else:
-                    contenedor_ruleta = st.empty()
-                    for _ in range(10):
-                        nombre_ruleta = random.choice(candidatos)
-                        contenedor_ruleta.markdown(f"<h2 style='text-align: center; color: #FF4B4B;'>🎡 {nombre_ruleta} 🎡</h2>", unsafe_allow_html=True)
-                        time.sleep(0.12)
-                    
-                    elegido_final = random.choice(candidatos)
-                    contenedor_ruleta.markdown(f"<h1 style='text-align: center; color: #2ecc71;'>🎯 {elegido_final} 🎯</h1>", unsafe_allow_html=True)
-                    
-                    pts_jugador = jugadores_fecha_perfiles[elegido_final][posicion_a_sortear]
-                    if len(st.session_state.draft_manual["Equipo 1"]) <= len(st.session_state.draft_manual["Equipo 2"]):
-                        st.session_state.draft_manual["Equipo 1"].append((elegido_final, posicion_a_sortear))
-                        st.session_state.draft_manual["Suma 1"] += pts_jugador
-                    else:
-                        st.session_state.draft_manual["Equipo 2"].append((elegido_final, posicion_a_sortear))
-                        st.session_state.draft_manual["Suma 2"] += pts_jugador
-                    st.rerun()
-                        
             st.write("---")
             st.write("### 2. Agregar Jugador a Mano")
             
@@ -405,7 +510,6 @@ else:
                     "Resultado": f"{res_eq1} - {res_eq2}"
                 }
                 st.session_state.historial_partidos.append(registro)
-                # GUARDADO PERSISTENTE EN LA NUBE AL AGREGAR PARTIDO
                 guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                 st.success("¡Partido archivado en la nube!")
                 st.rerun()
