@@ -92,9 +92,13 @@ if seccion_actual == "📋 Administración Total":
                     st.success(f"¡{nombre} guardado!")
                     st.rerun()
         with col2:
-            st.write("Jugadores actuales en el Roster:")
+            st.write("Jugadores actuales en el Roster (Carnet de habilidades):")
             for j in sorted(list(st.session_state.jugadores.keys())):
-                if st.button(f"🗑️ Eliminar {j}", key=f"del_{j}", use_container_width=True):
+                puntos = st.session_state.jugadores[j]
+                # Se renderiza el carnet con los stats del jugador al lado de su botón de eliminación
+                texto_carnet = f"🏀 **{j}** ➔ [ PG: {puntos.get('PG',0)} | SG: {puntos.get('SG',0)} | SF: {puntos.get('SF',0)} | PF: {puntos.get('PF',0)} | C: {puntos.get('C',0)} ]"
+                st.markdown(texto_carnet)
+                if st.button(f"🗑️ Eliminar permanentemente a {j}", key=f"del_{j}", use_container_width=True):
                     del st.session_state.jugadores[j]
                     guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                     st.rerun()
@@ -241,25 +245,36 @@ else:
             with pestana2:
                 posicion_a_sortear = st.selectbox("Posición a sortear:", roles_totales)
                 
+                # Función limpia corregida para evitar impresiones fantasmas en pantalla
                 def es_seguro_elegir(jugador_test, pos_test):
                     libres_simulados = [j for j in libres_hoy if j != jugador_test]
                     faltantes_eq1 = [r for r in roles_totales if r not in pos_cubiertas_eq1]
                     faltantes_eq2 = [r for r in roles_totales if r not in pos_cubiertas_eq2]
+                    
                     if len(st.session_state.draft_manual["Equipo 1"]) <= len(st.session_state.draft_manual["Equipo 2"]):
-                        if pos_test in faltantes_eq1: faltantes_eq1.remove(pos_test)
+                        if pos_test in faltantes_eq1: 
+                            faltantes_eq1.remove(pos_test)
                     else:
-                        if pos_test in faltantes_eq2: faltantes_eq2.remove(pos_test)
+                        if pos_test in faltantes_eq2: 
+                            faltantes_eq2.remove(pos_test)
+                            
                     roles_que_faltan_llenar = faltantes_eq1 + faltantes_eq2
-                    if not roles_que_faltan_llenar: return True
+                    if not roles_que_faltan_llenar: 
+                        return True
+                        
                     for _ in range(300):
                         random.shuffle(libres_simulados)
                         temp_libres = libres_simulados.copy()
-                        exito = True
+                        exito_simulacion = True
                         for r_faltante in roles_que_faltan_llenar:
                             apto = next((j for j in temp_libres if r_faltante in jugadores_fecha_perfiles.get(j, {})), None)
-                            if apto: temp_libres.remove(apto)
-                            else: {exito := False}; break
-                        if exito: return True
+                            if apto: 
+                                temp_libres.remove(apto)
+                            else: 
+                                exito_simulacion = False
+                                break
+                        if exito_simulacion: 
+                            return True
                     return False
 
                 candidatos = [j for j in libres_hoy if posicion_a_sortear in jugadores_fecha_perfiles.get(j, {}) and es_seguro_elegir(j, posicion_a_sortear)]
@@ -275,7 +290,6 @@ else:
                     ganador = st.session_state.ganador_ruleta if st.session_state.ganador_ruleta in candidatos else candidatos[0]
                     idx_ganador = candidatos.index(ganador)
 
-                    # Corregido: pasamos los datos serializados limpiamente sin romper strings triples
                     js_candidatos = json.dumps(candidatos)
                     js_colores = json.dumps(lista_colores)
 
@@ -373,7 +387,6 @@ else:
         with st.container(height=340, border=True):
             sub_col1, sub_col2 = st.columns(2)
             with sub_col1:
-                # Corregido: Limpiamos las comillas complejas de la f-string de Streamlit
                 txt_e1 = f"### 🔵 Eq 1 ({st.session_state.draft_manual['Suma 1']})" if ver_puntos else "### 🔵 Eq 1"
                 st.markdown(txt_e1)
                 for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 1"]):
@@ -386,7 +399,6 @@ else:
                         st.rerun()
                         
             with sub_col2:
-                # Corregido: Igual acá, evitamos escapar comillas anidadas en Markdown
                 txt_e2 = f"### 🔴 Eq 2 ({st.session_state.draft_manual['Suma 2']})" if ver_puntos else "### 🔴 Eq 2"
                 st.markdown(txt_e2)
                 for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 2"]):
@@ -402,7 +414,6 @@ else:
         dict_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
         dict_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
         
-        # Corregido: Armamos el bloque de texto plano de forma segura sin f-string triple rota
         texto_plano = "POS | EQUIPO 1       | EQUIPO 2\n"
         for pos in roles_totales:
             p1 = dict_e1.get(pos, '---').ljust(14)
