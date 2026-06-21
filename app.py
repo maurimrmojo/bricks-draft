@@ -92,16 +92,26 @@ if seccion_actual == "📋 Administración Total":
                     st.success(f"¡{nombre} guardado!")
                     st.rerun()
         with col2:
-            st.write("Jugadores actuales en el Roster (Carnet de habilidades):")
+            st.write("📋 Jugadores actuales en el Roster:")
             for j in sorted(list(st.session_state.jugadores.keys())):
                 puntos = st.session_state.jugadores[j]
-                # Se renderiza el carnet con los stats del jugador al lado de su botón de eliminación
-                texto_carnet = f"🏀 **{j}** ➔ [ PG: {puntos.get('PG',0)} | SG: {puntos.get('SG',0)} | SF: {puntos.get('SF',0)} | PF: {puntos.get('PF',0)} | C: {puntos.get('C',0)} ]"
-                st.markdown(texto_carnet)
-                if st.button(f"🗑️ Eliminar permanentemente a {j}", key=f"del_{j}", use_container_width=True):
-                    del st.session_state.jugadores[j]
-                    guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                    st.rerun()
+                
+                # Formato Carnet visualmente ordenado en una mini-tabla o caja
+                with st.container(border=True):
+                    c_info, c_action = st.columns([3, 1])
+                    with c_info:
+                        st.markdown(f"### 🪪 {j}")
+                        # Mostramos las posiciones alineadas tipo tarjeta
+                        st.code(
+                            f"PG: {puntos.get('PG', 0)} | SG: {puntos.get('SG', 0)} | SF: {puntos.get('SF', 0)} | PF: {puntos.get('PF', 0)} | C: {puntos.get('C', 0)}",
+                            language="text"
+                        )
+                    with c_action:
+                        st.write("") # Espaciador visual para centrar el botón
+                        if st.button("🗑️ Eliminar", key=f"del_{j}", use_container_width=True, type="primary"):
+                            del st.session_state.jugadores[j]
+                            guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                            st.rerun()
 
     with tab_historial:
         st.header("🚨 Gestión de Partidos (Filtro Anti-Troll)")
@@ -133,7 +143,6 @@ if seccion_actual == "📋 Administración Total":
 else:
     st.title("🏀 Mesa de Draft a la Carta")
     
-    # Declaramos las 3 columnas principales
     col_izquierda, col_centro, col_derecha = st.columns([1.1, 1.3, 1.4])
     
     # -----------------------------------------------------------------
@@ -245,7 +254,6 @@ else:
             with pestana2:
                 posicion_a_sortear = st.selectbox("Posición a sortear:", roles_totales)
                 
-                # Función limpia corregida para evitar impresiones fantasmas en pantalla
                 def es_seguro_elegir(jugador_test, pos_test):
                     libres_simulados = [j for j in libres_hoy if j != jugador_test]
                     faltantes_eq1 = [r for r in roles_totales if r not in pos_cubiertas_eq1]
