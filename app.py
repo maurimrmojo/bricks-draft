@@ -453,48 +453,51 @@ else:
 # =====================================================================
 # BLOQUE COMÚN REUTILIZABLE: RENDERIZADO DE CANCHA (COLUMNA DERECHA)
 # =====================================================================
+# =====================================================================
+# BLOQUE COMÚN REUTILIZABLE: RENDERIZADO DE CANCHA (COLUMNA DERECHA)
+# =====================================================================
 with col_derecha:
     st.header("🔥 Control")
     
-    # Envoltura HTML con clase única para evitar las restricciones del Virtual DOM de Streamlit
-    st.markdown('<div class="bloque-captura-cancha-bricks" style="background-color: #0e1117; padding: 12px; border-radius: 8px; border: 2px solid #31333F;">', unsafe_allow_html=True)
+    # Envoltura HTML con clase única. Eliminamos el contenedor con scroll interno
+    st.markdown('<div class="bloque-captura-cancha-bricks" style="background-color: #0e1117; padding: 20px; border-radius: 12px; border: 2px solid #31333F; min-width: 300px;">', unsafe_allow_html=True)
     
-    with st.container(height=320, border=True):
-        sub_col1, sub_col2 = st.columns(2)
-        with sub_col1:
-            if ver_puntos:
-                st.markdown(f"### 🔵 Eq 1 ({st.session_state.draft_manual['Suma 1']})")
-            else:
-                st.markdown("### 🔵 Eq 1")
-            for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 1"]):
-                pts = st.session_state.jugadores[jug].get(rol, 0)
-                c_txt, c_x = st.columns([4, 1])
-                c_txt.write(f"• **{jug}** ({rol})")
-                if es_admin_stream and c_x.button("❌", key=f"k1_{idx}"):
-                    st.session_state.draft_manual["Suma 1"] -= pts
-                    st.session_state.draft_manual["Equipo 1"].pop(idx)
-                    st.rerun()
-                    
-        with sub_col2:
-            if ver_puntos:
-                st.markdown(f"### 🔴 Eq 2 ({st.session_state.draft_manual['Suma 2']})")
-            else:
-                st.markdown("### 🔴 Eq 2")
-            for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 2"]):
-                pts = st.session_state.jugadores[jug].get(rol, 0)
-                c_txt, c_x = st.columns([4, 1])
-                c_txt.write(f"• **{jug}** ({rol})")
-                if es_admin_stream and c_x.button("❌", key=f"k2_{idx}"):
-                    st.session_state.draft_manual["Suma 2"] -= pts
-                    st.session_state.draft_manual["Equipo 2"].pop(idx)
-                    st.rerun()
+    sub_col1, sub_col2 = st.columns(2)
+    with sub_col1:
+        if ver_puntos:
+            st.markdown(f"### 🔵 Eq 1 ({st.session_state.draft_manual['Suma 1']})")
+        else:
+            st.markdown("### 🔵 Eq 1")
+        for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 1"]):
+            pts = st.session_state.jugadores[jug].get(rol, 0)
+            c_txt, c_x = st.columns([3.5, 1.2])
+            c_txt.write(f"• **{jug}** ({rol})")
+            if es_admin_stream and c_x.button("❌", key=f"k1_{idx}"):
+                st.session_state.draft_manual["Suma 1"] -= pts
+                st.session_state.draft_manual["Equipo 1"].pop(idx)
+                st.rerun()
+                
+    with sub_col2:
+        if ver_puntos:
+            st.markdown(f"### 🔴 Eq 2 ({st.session_state.draft_manual['Suma 2']})")
+        else:
+            st.markdown("### 🔴 Eq 2")
+        for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 2"]):
+            pts = st.session_state.jugadores[jug].get(rol, 0)
+            c_txt, c_x = st.columns([3.5, 1.2])
+            c_txt.write(f"• **{jug}** ({rol})")
+            if es_admin_stream and c_x.button("❌", key=f"k2_{idx}"):
+                st.session_state.draft_manual["Suma 2"] -= pts
+                st.session_state.draft_manual["Equipo 2"].pop(idx)
+                st.rerun()
 
+    st.write("")
     st.markdown(f'🔑 **Matchmaking:** `{codigo_actual}`', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.write("")
     
-    # SCRIPT DE CAPTURA SUPREMO CORREGIDO: Clona y parsea el DOM del navegador
+    # SCRIPT DE CAPTURA MEJORADO: Ignora el scroll y fuerza renderizado de texto nativo
     html_boton_screenshot = f"""
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <button onclick="ejecutarCapturaBrutal()" style="
@@ -513,7 +516,6 @@ with col_derecha:
 
     <script>
     function ejecutarCapturaBrutal() {{
-        // Buscar el div usando selectores de clase nativos e hilos secundarios
         let documentoRaiz = window.parent.document;
         let contenedorCancha = documentoRaiz.querySelector(".bloque-captura-cancha-bricks");
         
@@ -521,7 +523,6 @@ with col_derecha:
             contenedorCancha = document.querySelector(".bloque-captura-cancha-bricks");
         }}
         
-        // Si sigue sin encontrarlo, lo extrae rastreando las palabras clave internas
         if (!contenedorCancha) {{
             let todosLosDivs = documentoRaiz.querySelectorAll('div');
             for (let i = 0; i < todosLosDivs.length; i++) {{
@@ -533,12 +534,15 @@ with col_derecha:
         }}
 
         if (contenedorCancha) {{
+            // Forzamos que los estilos de fuentes se procesen de forma síncrona antes de la foto
             html2canvas(contenedorCancha, {{
                 backgroundColor: "#0e1117",
-                scale: 2, // Súper resolución nítida para OBS
+                scale: 2, 
                 logging: false,
                 useCORS: true,
-                allowTaint: true
+                allowTaint: true,
+                windowWidth: contenedorCancha.scrollWidth,
+                windowHeight: contenedorCancha.scrollHeight
             }}).then(function(canvas) {{
                 let linkFicticio = document.createElement('a');
                 linkFicticio.download = 'Cancha_Match_{codigo_actual}.png';
