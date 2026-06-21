@@ -122,65 +122,62 @@ equipos_listos = (len(st.session_state.draft_manual["Equipo 1"]) == 5 and len(st
 # =====================================================================
 if seccion_actual == "📋 Administración Total":
     st.title("⚙️ Panel de Control — Super Admin")
-    # CORRECCIÓN: Definimos las columnas para que col_derecha exista y no rompa la app
-    col_centro, col_derecha = st.columns([2.3, 1.3])
     
-    with col_centro:
-        tab_roster, tab_historial = st.tabs(["👤 Gestión Roster", "🚨 Gestión Historial"])
-        
-        with tab_roster:
-            st.header("👤 Agregar / Borrar Jugadores")
-            col1, col2 = st.columns(2)
-            with col1:
-                nombre = st.text_input("Nombre del Jugador:").upper().strip()
-                pg = st.number_input("PG (Base)", 0, 99, 0)
-                sg = st.number_input("SG (Escolta)", 0, 99, 0)
-                sf = st.number_input("SF (Alero)", 0, 99, 0)
-                pf = st.number_input("PF (Ala-Pívot)", 0, 99, 0)
-                c = st.number_input("C (Pívot)", 0, 99, 0)
-                if st.button("💾 Guardar Jugador permanentemente", use_container_width=True):
-                    if nombre:
-                        st.session_state.jugadores[nombre] = {"PG":pg,"SG":sg,"SF":sf,"PF":pf,"C":c}
-                        guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                        st.success(f"¡{nombre} guardado!")
-                        st.rerun()
-            with col2:
-                st.write("📋 Jugadores actuales en el Roster:")
-                for j in sorted(list(st.session_state.jugadores.keys())):
-                    puntos = st.session_state.jugadores[j]
-                    with st.container(border=True):
-                        c_info, c_action = st.columns([3, 1])
-                        with c_info:
-                            st.markdown(f"### 🪪 {j}")
-                            st.code(f"PG: {puntos.get('PG', 0)} | SG: {puntos.get('SG', 0)} | SF: {puntos.get('SF', 0)} | PF: {puntos.get('PF', 0)} | C: {puntos.get('C', 0)}", language="text")
-                        with c_action:
-                            st.write("") 
-                            if st.button("🗑️ Eliminar", key=f"del_{j}", use_container_width=True, type="primary"):
-                                del st.session_state.jugadores[j]
-                                guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                                st.rerun()
-
-        with tab_historial:
-            st.header("🚨 Gestión de Partidos (Filtro Anti-Troll)")
-            if st.session_state.historial_partidos:
-                opciones = [f"#{i+1}: {p['Equipos']} | {p['Resultado']}" for i, p in enumerate(st.session_state.historial_partidos)]
-                idx_elegido = st.selectbox("Seleccionar partido para auditar o borrar:", range(len(opciones)), format_func=lambda x: opciones[x])
-                c_del, c_edit = st.columns(2)
-                if c_del.button("💥 BORRAR ESTE PARTIDO POR COMPLETO", type="primary", use_container_width=True):
-                    st.session_state.historial_partidos.pop(idx_elegido)
+    tab_roster, tab_historial = st.tabs(["👤 Gestión Roster", "🚨 Gestión Historial"])
+    
+    with tab_roster:
+        st.header("👤 Agregar / Borrar Jugadores")
+        col1, col2 = st.columns(2)
+        with col1:
+            nombre = st.text_input("Nombre del Jugador:").upper().strip()
+            pg = st.number_input("PG (Base)", 0, 99, 0)
+            sg = st.number_input("SG (Escolta)", 0, 99, 0)
+            sf = st.number_input("SF (Alero)", 0, 99, 0)
+            pf = st.number_input("PF (Ala-Pívot)", 0, 99, 0)
+            c = st.number_input("C (Pívot)", 0, 99, 0)
+            if st.button("💾 Guardar Jugador permanentemente", use_container_width=True):
+                if nombre:
+                    st.session_state.jugadores[nombre] = {"PG":pg,"SG":sg,"SF":sf,"PF":pf,"C":c}
                     guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                    st.warning("Partido removido del historial.")
+                    st.success(f"¡{nombre} guardado!")
                     st.rerun()
-                with c_edit.expander("✏️ Editar Marcador de este Partido"):
-                    n_res1 = st.number_input("Nuevo Score Eq 1", value=0, key="adm_score_1")
-                    n_res2 = st.number_input("Nuevo Score Eq 2", value=0, key="adm_score_2")
-                    if st.button("Aplicar Corrección Forzada", use_container_width=True):
-                        st.session_state.historial_partidos[idx_elegido]["Resultado"] = f"{n_res1} - {n_res2}"
-                        guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                        st.success("¡Marcador actualizado!")
-                        st.rerun()
-            else:
-                st.info("No hay partidos registrados en la base de datos.")
+        with col2:
+            st.write("📋 Jugadores actuales en el Roster:")
+            for j in sorted(list(st.session_state.jugadores.keys())):
+                puntos = st.session_state.jugadores[j]
+                with st.container(border=True):
+                    c_info, c_action = st.columns([3, 1])
+                    with c_info:
+                        st.markdown(f"### 🪪 {j}")
+                        st.code(f"PG: {puntos.get('PG', 0)} | SG: {puntos.get('SG', 0)} | SF: {puntos.get('SF', 0)} | PF: {puntos.get('PF', 0)} | C: {puntos.get('C', 0)}", language="text")
+                    with c_action:
+                        st.write("") 
+                        if st.button("🗑️ Eliminar", key=f"del_{j}", use_container_width=True, type="primary"):
+                            del st.session_state.jugadores[j]
+                            guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                            st.rerun()
+
+    with tab_historial:
+        st.header("🚨 Gestión de Partidos (Filtro Anti-Troll)")
+        if st.session_state.historial_partidos:
+            opciones = [f"#{i+1}: {p['Equipos']} | {p['Resultado']}" for i, p in enumerate(st.session_state.historial_partidos)]
+            idx_elegido = st.selectbox("Seleccionar partido para auditar o borrar:", range(len(opciones)), format_func=lambda x: opciones[x])
+            c_del, c_edit = st.columns(2)
+            if c_del.button("💥 BORRAR ESTE PARTIDO POR COMPLETO", type="primary", use_container_width=True):
+                st.session_state.historial_partidos.pop(idx_elegido)
+                guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                st.warning("Partido removido del historial.")
+                st.rerun()
+            with c_edit.expander("✏️ Editar Marcador de este Partido"):
+                n_res1 = st.number_input("Nuevo Score Eq 1", value=0, key="adm_score_1")
+                n_res2 = st.number_input("Nuevo Score Eq 2", value=0, key="adm_score_2")
+                if st.button("Aplicar Corrección Forzada", use_container_width=True):
+                    st.session_state.historial_partidos[idx_elegido]["Resultado"] = f"{n_res1} - {n_res2}"
+                    guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                    st.success("¡Marcador actualizado!")
+                    st.rerun()
+        else:
+            st.info("No hay partidos registrados en la base de datos.")
 
 # =====================================================================
 # VENTANA: MESA DE DRAFT (CONFIGURACIÓN DINÁMICA DE COLUMNAS)
@@ -466,183 +463,175 @@ else:
 
 # =====================================================================
 # BLOQUE COMÚN REUTILIZABLE: RENDERIZADO DE CANCHA (COLUMNA DERECHA)
+# Solo se muestra en las herramientas de Draft (No en Administración Total)
 # =====================================================================
-with col_derecha:
-    st.header("🔥 Control")
-    
-    # Renderizado visual nativo en Streamlit
-    with st.container(border=True):
-        sub_col1, sub_col2 = st.columns(2)
-        with sub_col1:
-            if ver_puntos:
-                st.markdown(f"### 🔵 Eq 1 ({st.session_state.draft_manual['Suma 1']})")
-            else:
-                st.markdown("### 🔵 Eq 1")
-            for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 1"]):
-                pts = st.session_state.jugadores[jug].get(rol, 0)
-                c_txt, c_x = st.columns([3.5, 1.2])
-                c_txt.write(f"• **{jug}** ({rol})")
-                if es_admin_stream and c_x.button("❌", key=f"k1_{idx}"):
-                    st.session_state.draft_manual["Suma 1"] -= pts
-                    st.session_state.draft_manual["Equipo 1"].pop(idx)
-                    st.rerun()
-                    
-        with sub_col2:
-            if ver_puntos:
-                st.markdown(f"### 🔴 Eq 2 ({st.session_state.draft_manual['Suma 2']})")
-            else:
-                st.markdown("### 🔴 Eq 2")
-            for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 2"]):
-                pts = st.session_state.jugadores[jug].get(rol, 0)
-                c_txt, c_x = st.columns([3.5, 1.2])
-                c_txt.write(f"• **{jug}** ({rol})")
-                if es_admin_stream and c_x.button("❌", key=f"k2_{idx}"):
-                    st.session_state.draft_manual["Suma 2"] -= pts
-                    st.session_state.draft_manual["Equipo 2"].pop(idx)
-                    st.rerun()
-
-    st.markdown(f'🔑 **Matchmaking:** `{codigo_actual}`', unsafe_allow_html=True)
-    st.write("")
-    
-    # -----------------------------------------------------------------
-    # MOTOR DE GENERACIÓN DE IMAGEN NATIVA (PILLOW)
-    # -----------------------------------------------------------------
-    def generar_imagen_cancha():
-        # Crear un lienzo oscuro (estilo Bricks / Streamlit dark)
-        ancho, alto = 600, 400
-        img = Image.new("RGB", (ancho, alto), "#0e1117")
-        canvas = ImageDraw.Draw(img)
+if seccion_actual != "📋 Administración Total":
+    with col_derecha:
+        st.header("🔥 Control")
         
-        # Intentar cargar fuentes del sistema (si no, usa la default)
-        try:
-            fuente_titulo = ImageFont.truetype("arial.ttf", 24)
-            fuente_sub = ImageFont.truetype("arial.ttf", 18)
-            fuente_texto = ImageFont.truetype("arial.ttf", 16)
-        except:
-            fuente_titulo = fuente_sub = fuente_texto = ImageFont.load_default()
-            
-        # Dibujar bordes decorativos estéticos
-        canvas.rectangle([10, 10, ancho - 10, alto - 10], outline="#31333F", width=3)
-        
-        # Encabezado principal
-        canvas.text((30, 25), "🏀 DRAFT A LA CARTA", fill="#ffffff", font=fuente_titulo)
-        canvas.line([(30, 60), (ancho - 30, 60)], fill="#31333F", width=2)
-        
-        # --- EQUIPO 1 (COLUMNA IZQUIERDA) ---
-        canvas.text((40, 80), "🔵 EQUIPO 1", fill="#1f77b4", font=fuente_sub)
-        y_pos = 115
-        for jug, rol in st.session_state.draft_manual["Equipo 1"]:
-            canvas.text((50, y_pos), f"• {jug} ({rol})", fill="#e2e8f0", font=fuente_texto)
-            y_pos += 30
-        if not st.session_state.draft_manual["Equipo 1"]:
-            canvas.text((50, 115), "(Sin jugadores)", fill="#64748b", font=fuente_texto)
-            
-        # --- EQUIPO 2 (COLUMNA DERECHA) ---
-        canvas.text((320, 80), "🔴 EQUIPO 2", fill="#ff4b4b", font=fuente_sub)
-        y_pos = 115
-        for jug, rol in st.session_state.draft_manual["Equipo 2"]:
-            canvas.text((330, y_pos), f"• {jug} ({rol})", fill="#e2e8f0", font=fuente_texto)
-            y_pos += 30
-        if not st.session_state.draft_manual["Equipo 2"]:
-            canvas.text((330, 115), "(Sin jugadores)", fill="#64748b", font=fuente_texto)
-            
-        # --- PIE DE PÁGINA: MATCHMAKING ---
-        canvas.line([(30, 330), (ancho - 30, 330)], fill="#31333F", width=2)
-        canvas.text((30, 350), f"🔑 MATCHMAKING CODE:  {codigo_actual}", fill="#2ecc71", font=fuente_sub)
-        
-        # Guardar en caché temporal para el botón
-        ruta_temp = "cancha_temp.png"
-        img.save(ruta_temp)
-        return ruta_temp
-
-    # Generamos la foto en segundo plano y la dejamos lista para descargar
-    try:
-        archivo_foto = generar_imagen_cancha()
-        with open(archivo_foto, "rb") as file:
-            btn_descarga = st.download_button(
-                label="📸 CAPTURAR CANCHA (FOTO PNG)",
-                data=file,
-                file_name=f"Cancha_Match_{codigo_actual}.png",
-                mime="image/png",
-                use_container_width=True,
-                type="primary"
-            )
-    except Exception as e:
-        st.error(f"Error generando imagen: {e}")
-
-    st.write("")
-
-    if es_admin_stream:
-        st.markdown("**📝 Marcador Final:**")
-        mc1, mc2, mc3 = st.columns([1.5, 1.5, 2])
-        res_eq1 = mc1.number_input("🔵 Eq 1:", min_value=0, value=0, key="scr_1")
-        res_eq2 = mc2.number_input("🔴 Eq 2:", min_value=0, value=0, key="scr_2")
-        
-        if mc3.button("💾 archivar", use_container_width=True):
-            nombres_e1 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 1"]])
-            nombres_e2 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 2"]])
-            
-            st.session_state.historial_partidos.append({
-                "Equipos": f"🔵 ({nombres_e1}) VS 🔴 ({nombres_e2})",
-                "Resultado": f"{res_eq1} - {res_eq2}",
-                "Codigo Usado": codigo_actual
-            })
-            guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-            
-            # Avanza al siguiente código de la lista para el próximo partido
-            st.session_state.contador_codigo_dia += 1
-            
-            if res_eq1 > res_eq2:
-                equipo_a_reemplazar = "Equipo 2"
-                equipo_fijo = "Equipo 1"
-            elif res_eq2 > res_eq1:
-                equipo_a_reemplazar = "Equipo 1"
-                equipo_fijo = "Equipo 2"
-            else:
-                equipo_a_reemplazar = "Equipo 2"
-                equipo_fijo = "Equipo 1"
-            
-            roles_perdedores = [j[1] for j in st.session_state.draft_manual[equipo_a_reemplazar]]
-            if not roles_perdedores: roles_perdedores = roles_totales.copy()
-            
-            nuevo_equipo_reemplazo = []
-            banco_simulado = lista_espera.copy()
-            
-            for r_liberado in roles_perdedores:
-                candidato_banco = next((j for j in banco_simulado if r_liberado in jugadores_fecha_perfiles.get(j, {})), None)
-                if candidato_banco:
-                    nuevo_equipo_reemplazo.append((candidato_banco, r_liberado))
-                    banco_simulado.remove(candidato_banco)
+        # Renderizado visual nativo en Streamlit
+        with st.container(border=True):
+            sub_col1, sub_col2 = st.columns(2)
+            with sub_col1:
+                if ver_puntos:
+                    st.markdown(f"### 🔵 Eq 1 ({st.session_state.draft_manual['Suma 1']})")
                 else:
-                    if banco_simulado:
-                        candidato_banco = banco_simulado[0]
+                    st.markdown("### 🔵 Eq 1")
+                for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 1"]):
+                    pts = st.session_state.jugadores[jug].get(rol, 0)
+                    c_txt, c_x = st.columns([3.5, 1.2])
+                    c_txt.write(f"• **{jug}** ({rol})")
+                    if es_admin_stream and c_x.button("❌", key=f"k1_{idx}"):
+                        st.session_state.draft_manual["Suma 1"] -= pts
+                        st.session_state.draft_manual["Equipo 1"].pop(idx)
+                        st.rerun()
+                        
+            with sub_col2:
+                if ver_puntos:
+                    st.markdown(f"### 🔴 Eq 2 ({st.session_state.draft_manual['Suma 2']})")
+                else:
+                    st.markdown("### 🔴 Eq 2")
+                for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 2"]):
+                    pts = st.session_state.jugadores[jug].get(rol, 0)
+                    c_txt, c_x = st.columns([3.5, 1.2])
+                    c_txt.write(f"• **{jug}** ({rol})")
+                    if es_admin_stream and c_x.button("❌", key=f"k2_{idx}"):
+                        st.session_state.draft_manual["Suma 2"] -= pts
+                        st.session_state.draft_manual["Equipo 2"].pop(idx)
+                        st.rerun()
+
+        st.markdown(f'🔑 **Matchmaking:** `{codigo_actual}`', unsafe_allow_html=True)
+        st.write("")
+        
+        # -----------------------------------------------------------------
+        # MOTOR DE GENERACIÓN DE IMAGEN NATIVA (PILLOW)
+        # -----------------------------------------------------------------
+        def generar_imagen_cancha():
+            ancho, alto = 600, 400
+            img = Image.new("RGB", (ancho, alto), "#0e1117")
+            canvas = ImageDraw.Draw(img)
+            
+            try:
+                fuente_titulo = ImageFont.truetype("arial.ttf", 24)
+                fuente_sub = ImageFont.truetype("arial.ttf", 18)
+                fuente_texto = ImageFont.truetype("arial.ttf", 16)
+            except:
+                fuente_titulo = fuente_sub = fuente_texto = ImageFont.load_default()
+                
+            canvas.rectangle([10, 10, ancho - 10, alto - 10], outline="#31333F", width=3)
+            
+            canvas.text((30, 25), "🏀 DRAFT A LA CARTA", fill="#ffffff", font=fuente_titulo)
+            canvas.line([(30, 60), (ancho - 30, 60)], fill="#31333F", width=2)
+            
+            canvas.text((40, 80), "🔵 EQUIPO 1", fill="#1f77b4", font=fuente_sub)
+            y_pos = 115
+            for jug, rol in st.session_state.draft_manual["Equipo 1"]:
+                canvas.text((50, y_pos), f"• {jug} ({rol})", fill="#e2e8f0", font=fuente_texto)
+                y_pos += 30
+            if not st.session_state.draft_manual["Equipo 1"]:
+                canvas.text((50, 115), "(Sin jugadores)", fill="#64748b", font=fuente_texto)
+                
+            canvas.text((320, 80), "🔴 EQUIPO 2", fill="#ff4b4b", font=fuente_sub)
+            y_pos = 115
+            for jug, rol in st.session_state.draft_manual["Equipo 2"]:
+                canvas.text((330, y_pos), f"• {jug} ({rol})", fill="#e2e8f0", font=fuente_texto)
+                y_pos += 30
+            if not st.session_state.draft_manual["Equipo 2"]:
+                canvas.text((330, 115), "(Sin jugadores)", fill="#64748b", font=fuente_texto)
+                
+            canvas.line([(30, 330), (ancho - 30, 330)], fill="#31333F", width=2)
+            canvas.text((30, 350), f"🔑 MATCHMAKING CODE:  {codigo_actual}", fill="#2ecc71", font=fuente_sub)
+            
+            ruta_temp = "cancha_temp.png"
+            img.save(ruta_temp)
+            return ruta_temp
+
+        try:
+            archivo_foto = generar_imagen_cancha()
+            with open(archivo_foto, "rb") as file:
+                btn_descarga = st.download_button(
+                    label="📸 CAPTURAR CANCHA (FOTO PNG)",
+                    data=file,
+                    file_name=f"Cancha_Match_{codigo_actual}.png",
+                    mime="image/png",
+                    use_container_width=True,
+                    type="primary"
+                )
+        except Exception as e:
+            st.error(f"Error generando imagen: {e}")
+
+        st.write("")
+
+        if es_admin_stream:
+            st.markdown("**📝 Marcador Final:**")
+            mc1, mc2, mc3 = st.columns([1.5, 1.5, 2])
+            res_eq1 = mc1.number_input("🔵 Eq 1:", min_value=0, value=0, key="scr_1")
+            res_eq2 = mc2.number_input("🔴 Eq 2:", min_value=0, value=0, key="scr_2")
+            
+            if mc3.button("💾 archivar", use_container_width=True):
+                nombres_e1 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 1"]])
+                nombres_e2 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 2"]])
+                
+                st.session_state.historial_partidos.append({
+                    "Equipos": f"🔵 ({nombres_e1}) VS 🔴 ({nombres_e2})",
+                    "Resultado": f"{res_eq1} - {res_eq2}",
+                    "Codigo Usado": codigo_actual
+                })
+                guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                
+                st.session_state.contador_codigo_dia += 1
+                
+                if res_eq1 > res_eq2:
+                    equipo_a_reemplazar = "Equipo 2"
+                    equipo_fijo = "Equipo 1"
+                elif res_eq2 > res_eq1:
+                    equipo_a_reemplazar = "Equipo 1"
+                    equipo_fijo = "Equipo 2"
+                else:
+                    equipo_a_reemplazar = "Equipo 2"
+                    equipo_fijo = "Equipo 1"
+                
+                roles_perdedores = [j[1] for j in st.session_state.draft_manual[equipo_a_reemplazar]]
+                if not roles_perdedores: roles_perdedores = roles_totales.copy()
+                
+                nuevo_equipo_reemplazo = []
+                banco_simulado = lista_espera.copy()
+                
+                for r_liberado in roles_perdedores:
+                    candidato_banco = next((j for j in banco_simulado if r_liberado in jugadores_fecha_perfiles.get(j, {})), None)
+                    if candidato_banco:
                         nuevo_equipo_reemplazo.append((candidato_banco, r_liberado))
                         banco_simulado.remove(candidato_banco)
-            
-            suma_fijo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores[j[0]]).get(j[1], 0) for j in st.session_state.draft_manual[equipo_fijo]])
-            suma_reemplazo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores[j[0]]).get(j[1], 0) for j in nuevo_equipo_reemplazo])
-            
-            st.session_state.draft_manual[equipo_a_reemplazar] = nuevo_equipo_reemplazo
-            if equipo_fijo == "Equipo 1":
-                st.session_state.draft_manual["Suma 1"] = suma_fijo
-                st.session_state.draft_manual["Suma 2"] = suma_reemplazo
-            else:
-                st.session_state.draft_manual["Suma 1"] = suma_reemplazo
-                st.session_state.draft_manual["Suma 2"] = suma_fijo
-            
-            st.session_state.lista_espera_forzada = [] 
-            st.success("¡Partido archivado y rotación lista!")
-            st.rerun()
+                    else:
+                        if banco_simulado:
+                            candidato_banco = banco_simulado[0]
+                            nuevo_equipo_reemplazo.append((candidato_banco, r_liberado))
+                            banco_simulado.remove(candidato_banco)
+                
+                suma_fijo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores[j[0]]).get(j[1], 0) for j in st.session_state.draft_manual[equipo_fijo]])
+                suma_reemplazo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores[j[0]]).get(j[1], 0) for j in nuevo_equipo_reemplazo])
+                
+                st.session_state.draft_manual[equipo_a_reemplazar] = nuevo_equipo_reemplazo
+                if equipo_fijo == "Equipo 1":
+                    st.session_state.draft_manual["Suma 1"] = suma_fijo
+                    st.session_state.draft_manual["Suma 2"] = suma_reemplazo
+                else:
+                    st.session_state.draft_manual["Suma 1"] = suma_reemplazo
+                    st.session_state.draft_manual["Suma 2"] = suma_fijo
+                
+                st.session_state.lista_espera_forzada = [] 
+                st.success("¡Partido archivado y rotación lista!")
+                st.rerun()
 
-        if st.session_state.historial_partidos:
-            with st.expander("🩹 Corregir score anterior"):
-                ec1, ec2, ec3 = st.columns(3)
-                er1 = ec1.number_input("Eq 1:", min_value=0, value=0, key="err_1")
-                er2 = ec2.number_input("Eq 2:", min_value=0, value=0, key="err_2")
-                if ec3.button("Modificar", use_container_width=True):
-                    st.session_state.historial_partidos[-1]["Resultado"] = f"{er1} - {er2}"
-                    guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                    st.rerun()
+            if st.session_state.historial_partidos:
+                with st.expander("🩹 Corregir score anterior"):
+                    ec1, ec2, ec3 = st.columns(3)
+                    er1 = ec1.number_input("Eq 1:", min_value=0, value=0, key="err_1")
+                    er2 = ec2.number_input("Eq 2:", min_value=0, value=0, key="err_2")
+                    if ec3.button("Modificar", use_container_width=True):
+                        st.session_state.historial_partidos[-1]["Resultado"] = f"{er1} - {er2}"
+                        guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                        st.rerun()
 
 # =====================================================================
 # SECCIÓN INFERIOR: HISTORIAL DE RESULTADOS GLOBAL CONSTANTE
