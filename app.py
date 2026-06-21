@@ -171,7 +171,7 @@ else:
         ya_drafteados = [j[0] for j in st.session_state.draft_manual["Equipo 1"]] + [j[0] for j in st.session_state.draft_manual["Equipo 2"]]
         lista_espera = [j for j in presentes if j not in ya_drafteados]
         
-        # UBICACIÓN NUEVA: Ajuste de Roles hoy pasa a estar abajo de Convocatoria
+        # Ajuste de Roles hoy abajo de Convocatoria
         jugadores_fecha_perfiles = {}
         if presentes:
             st.write("---")
@@ -208,11 +208,12 @@ else:
     with col_centro:
         st.header("🎡 Herramientas")
         if es_admin_stream:
-            pestana1, pestana2 = st.tabs(["🎯 Sorteo Auto Balanced", "🎡 Ruleta Interactiva"])
+            # REQUERIMIENTO: Añadida Pestana 3 para armado dinámico 100% a mano escribiendo/buscando
+            pestana1, pestana2, pestana3 = st.tabs(["🎯 Sorteo Auto Balanced", "🎡 Ruleta Interactiva", "✍️ Armado 100% a Mano"])
             
             with pestana1:
                 if equipos_listos:
-                    st.info("🔒 **Equipos armados correctamente.** Sorteo automático bloqueado para evitar cambios accidentales. Usa el sistema de rotación automática al archivar.")
+                    st.info("🔒 **Equipos armados correctamente.** Sorteo automático bloqueado.")
                 else:
                     if st.button("🚀 Ejecutar Algoritmo de Sorteo", type="primary", use_container_width=True):
                         if len(presentes) < 10:
@@ -274,15 +275,12 @@ else:
                     faltantes_eq2 = [r for r in roles_totales if r not in pos_cubiertas_eq2]
                     
                     if len(st.session_state.draft_manual["Equipo 1"]) <= len(st.session_state.draft_manual["Equipo 2"]):
-                        if pos_test in faltantes_eq1: 
-                            faltantes_eq1.remove(pos_test)
+                        if pos_test in faltantes_eq1: faltantes_eq1.remove(pos_test)
                     else:
-                        if pos_test in faltantes_eq2: 
-                            faltantes_eq2.remove(pos_test)
+                        if pos_test in faltantes_eq2: faltantes_eq2.remove(pos_test)
                             
                     roles_que_faltan_llenar = faltantes_eq1 + faltantes_eq2
-                    if not roles_que_faltan_llenar: 
-                        return True
+                    if not roles_que_faltan_llenar: return True
                         
                     for _ in range(300):
                         random.shuffle(libres_simulados)
@@ -290,13 +288,11 @@ else:
                         exito_simulacion = True
                         for r_faltante in roles_que_faltan_llenar:
                             apto = next((j for j in temp_libres if r_faltante in jugadores_fecha_perfiles.get(j, {})), None)
-                            if apto: 
-                                temp_libres.remove(apto)
+                            if apto: temp_libres.remove(apto)
                             else: 
                                 exito_simulacion = False
                                 break
-                        if exito_simulacion: 
-                            return True
+                        if exito_simulacion: return True
                     return False
 
                 candidatos = [j for j in libres_hoy if posicion_a_sortear in jugadores_fecha_perfiles.get(j, {}) and es_seguro_elegir(j, posicion_a_sortear)]
@@ -376,31 +372,64 @@ else:
                 else:
                     st.markdown("🔒 *No hay candidatos válidos libres.*")
 
-            st.write("---")
-            st.write("**Agregar a Mano:**")
-            if libres_hoy:
-                c_m1, c_m2, c_m3 = st.columns(3)
-                j_m = c_m1.selectbox("Jugador", libres_hoy, key="m_j")
-                r_v = list(jugadores_fecha_perfiles.get(j_m, {}).keys())
-                r_m = c_m2.selectbox("Rol", r_v, key="m_r")
-                e_d = c_m3.selectbox("Hacia", ["Eq 1", "Eq 2"], key="m_e")
-                if st.button("➕ Forzar Fichaje", use_container_width=True):
-                    pts = jugadores_fecha_perfiles[j_m][r_m]
-                    if e_d == "Eq 1":
-                        st.session_state.draft_manual["Equipo 1"].append((j_m, r_m))
-                        st.session_state.draft_manual["Suma 1"] += pts
-                    else:
-                        st.session_state.draft_manual["Equipo 2"].append((j_m, r_m))
-                        st.session_state.draft_manual["Suma 2"] += pts
+            with pestana3:
+                st.markdown("✍️ **Escribí o buscá para armar los quintetos completos:**")
+                opciones_busqueda = ["---"] + sorted(list(st.session_state.jugadores.keys()))
+                
+                # Mapeos actuales para pre-cargar si ya hay algo en la mesa
+                dict_actual_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
+                dict_actual_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
+                
+                c_man_e1, c_man_e2 = st.columns(2)
+                
+                with c_man_e1:
+                    st.markdown("🔵 **Equipo 1**")
+                    b_pg1 = st.selectbox("PG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("PG", "---")), key="bm_pg1")
+                    b_sg1 = st.selectbox("SG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("SG", "---")), key="bm_sg1")
+                    b_sf1 = st.selectbox("SF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("SF", "---")), key="bm_sf1")
+                    b_pf1 = st.selectbox("PF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("PF", "---")), key="bm_pf1")
+                    b_c1  = st.selectbox("C:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("C", "---")), key="bm_c1")
+                    
+                with c_man_e2:
+                    st.markdown("🔴 **Equipo 2**")
+                    b_pg2 = st.selectbox("PG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("PG", "---")), key="bm_pg2")
+                    b_sg2 = st.selectbox("SG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("SG", "---")), key="bm_sg2")
+                    b_sf2 = st.selectbox("SF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("SF", "---")), key="bm_sf2")
+                    b_pf2 = st.selectbox("PF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("PF", "---")), key="bm_pf2")
+                    b_c2  = st.selectbox("C:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("C", "---")), key="bm_c2")
+                
+                if st.button("💾 Aplicar Plantilla Manual a la Cancha", type="primary", use_container_width=True):
+                    # Reconstruir Equipo 1
+                    nuevo_e1 = []
+                    s1 = 0
+                    for pos, val in [("PG", b_pg1), ("SG", b_sg1), ("SF", b_sf1), ("PF", b_pf1), ("C", b_c1)]:
+                        if val != "---":
+                            nuevo_e1.append((val, pos))
+                            s1 += st.session_state.jugadores[val].get(pos, 0)
+                            
+                    # Reconstruir Equipo 2
+                    nuevo_e2 = []
+                    s2 = 0
+                    for pos, val in [("PG", b_pg2), ("SG", b_sg2), ("SF", b_sf2), ("PF", b_pf2), ("C", b_c2)]:
+                        if val != "---":
+                            nuevo_e2.append((val, pos))
+                            s2 += st.session_state.jugadores[val].get(pos, 0)
+                            
+                    st.session_state.draft_manual["Equipo 1"] = nuevo_e1
+                    st.session_state.draft_manual["Equipo 2"] = nuevo_e2
+                    st.session_state.draft_manual["Suma 1"] = s1
+                    st.session_state.draft_manual["Suma 2"] = s2
+                    st.success("¡Cancha actualizada a mano con éxito!")
                     st.rerun()
-            
+
+            st.write("---")
             if st.button("❌ Reiniciar Mesa Completa", type="secondary", use_container_width=True):
                 st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
                 st.rerun()
         else:
             st.warning("Herramientas bloqueadas para Espectadores.")
 
-        # UBICACIÓN NUEVA: La Lista de Espera ahora se renderiza de forma centralizada abajo de las herramientas
+        # Lista de Espera abajo de las herramientas (Centro)
         st.write("---")
         st.subheader("📋 Lista de Espera")
         if lista_espera:
