@@ -177,7 +177,7 @@ if seccion_actual == "📋 Administración Total":
                 guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                 st.warning("Partido removido del historial.")
                 st.rerun()
-            with c_edit.edit_marcadores.expander("✏️ Editar Marcador de este Partido"):
+            with c_edit.expander("✏️ Editar Marcador de este Partido"):
                 n_res1 = st.number_input("Nuevo Score Eq 1", value=0, key="adm_score_1")
                 n_res2 = st.number_input("Nuevo Score Eq 2", value=0, key="adm_score_2")
                 if st.button("Aplicar Corrección Forzada", use_container_width=True):
@@ -212,7 +212,7 @@ elif seccion_actual == "📜 Historial de Partidos":
 elif seccion_actual == "✍️ Armado 100% a Mano":
     st.title("🏀 Mesa de Draft (Armado Manual)")
     
-    # --- NUEVO BLOQUE: CASILLEROS ESTILO EXCEL LIBRES ---
+    # --- BLOQUE: CASILLEROS ESTILO EXCEL LIBRES ---
     with st.expander("📝 Borrador Rápido (Cuadrícula Estilo Excel Libre)", expanded=True):
         st.markdown("<small style='color:gray;'>Bloque de anotación rápida de 30 casilleros independientes. No afecta las lógicas automáticas.</small>", unsafe_allow_html=True)
         
@@ -234,7 +234,8 @@ elif seccion_actual == "✍️ Armado 100% a Mano":
             c_id = idx + 21
             st.session_state.grid_libre_manual[f"c_{c_id}"] = col.text_input(f"C{c_id}", value=st.session_state.grid_libre_manual[f"c_{c_id}"], key=f"inp_g_{c_id}", label_visibility="collapsed", placeholder=f"[{c_id}]")
             
-        if st.button("🧹 Limpiar todos los casilleros", key="clear_excel_grid", size="small"):
+        # CORREGIDO: Eliminamos size="small" que causaba el crash
+        if st.button("🧹 Limpiar todos los casilleros", key="clear_excel_grid"):
             st.session_state.grid_libre_manual = {f"c_{i}": "" for i in range(1, 31)}
             st.rerun()
 
