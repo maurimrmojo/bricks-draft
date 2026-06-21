@@ -38,8 +38,11 @@ if "historial_partidos" not in st.session_state: st.session_state.historial_part
 if "draft_manual" not in st.session_state: st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
 if "lista_espera_forzada" not in st.session_state: st.session_state.lista_espera_forzada = []
 
-cant_partidos = len(st.session_state.historial_partidos)
-codigo_actual = CODIGOS_MATCHMAKING[cant_partidos % len(CODIGOS_MATCHMAKING)]
+# NUEVO: Contador independiente para los códigos del día
+if "contador_codigo_dia" not in st.session_state: st.session_state.contador_codigo_dia = 0
+
+# Ahora el código actual depende de este contador del día, no del historial total
+codigo_actual = CODIGOS_MATCHMAKING[st.session_state.contador_codigo_dia % len(CODIGOS_MATCHMAKING)]
 
 # =====================================================================
 # BARRA LATERAL Y LOGIN (GESTIÓN DE NAVEGACIÓN PRINCIPAL)
