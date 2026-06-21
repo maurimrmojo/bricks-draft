@@ -71,7 +71,19 @@ if st.sidebar.button("🔄 Sincronizar Datos", use_container_width=True):
     st.session_state.jugadores = datos_actualizados["jugadores"]
     st.session_state.historial_partidos = datos_actualizados["historial_partidos"]
     st.rerun()
+st.sidebar.write("---")
+if st.sidebar.button("🔄 Sincronizar Datos", use_container_width=True):
+    st.cache_data.clear()
+    datos_actualizados = cargar_datos_globales()
+    st.session_state.jugadores = datos_actualizados["jugadores"]
+    st.session_state.historial_partidos = datos_actualizados["historial_partidos"]
+    st.rerun()
 
+# NUEVO: Botón para reiniciar la secuencia de códigos diarios
+if st.sidebar.button("♻️ Reiniciar Códigos (Nuevo Día)", type="primary", use_container_width=True):
+    st.session_state.contador_codigo_dia = 0
+    st.toast("¡Secuencia de códigos reseteada a 1q2w!", icon="✅")
+    st.rerun()
 # Estructura de navegación para poder ocultar la Convocatoria dinámicamente
 opciones_menu = []
 if es_super_admin:
