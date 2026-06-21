@@ -457,10 +457,8 @@ else:
 with col_derecha:
     st.header("🔥 Control")
     
-    # Envoltura HTML con clase única para evitar las restricciones del Virtual DOM de Streamlit
-    st.markdown('<div class="bloque-captura-cancha-bricks" style="background-color: #0e1117; padding: 12px; border-radius: 8px; border: 2px solid #31333F;">', unsafe_allow_html=True)
-    
-    with st.container(height=320, border=True):
+    # Renderizado visual nativo en Streamlit
+    with st.container(border=True):
         sub_col1, sub_col2 = st.columns(2)
         with sub_col1:
             if ver_puntos:
@@ -469,7 +467,7 @@ with col_derecha:
                 st.markdown("### 🔵 Eq 1")
             for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 1"]):
                 pts = st.session_state.jugadores[jug].get(rol, 0)
-                c_txt, c_x = st.columns([4, 1])
+                c_txt, c_x = st.columns([3.5, 1.2])
                 c_txt.write(f"• **{jug}** ({rol})")
                 if es_admin_stream and c_x.button("❌", key=f"k1_{idx}"):
                     st.session_state.draft_manual["Suma 1"] -= pts
@@ -483,7 +481,7 @@ with col_derecha:
                 st.markdown("### 🔴 Eq 2")
             for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 2"]):
                 pts = st.session_state.jugadores[jug].get(rol, 0)
-                c_txt, c_x = st.columns([4, 1])
+                c_txt, c_x = st.columns([3.5, 1.2])
                 c_txt.write(f"• **{jug}** ({rol})")
                 if es_admin_stream and c_x.button("❌", key=f"k2_{idx}"):
                     st.session_state.draft_manual["Suma 2"] -= pts
@@ -491,68 +489,75 @@ with col_derecha:
                     st.rerun()
 
     st.markdown(f'🔑 **Matchmaking:** `{codigo_actual}`', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
     st.write("")
     
-    # SCRIPT DE CAPTURA SUPREMO CORREGIDO: Clona y parsea el DOM del navegador
-    html_boton_screenshot = f"""
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <button onclick="ejecutarCapturaBrutal()" style="
-        width: 100%; 
-        background-color: #2ecc71; 
-        color: white; 
-        border: none; 
-        padding: 14px; 
-        font-size: 14px; 
-        font-weight: bold; 
-        border-radius: 6px; 
-        cursor: pointer;
-        box-shadow: 0px 4px 8px rgba(0,0,0,0.4);
-        margin-bottom: 10px;
-    ">📸 CAPTURAR CANCHA (FOTO PNG)</button>
-
-    <script>
-    function ejecutarCapturaBrutal() {{
-        // Buscar el div usando selectores de clase nativos e hilos secundarios
-        let documentoRaiz = window.parent.document;
-        let contenedorCancha = documentoRaiz.querySelector(".bloque-captura-cancha-bricks");
+    # -----------------------------------------------------------------
+    # MOTOR DE GENERACIÓN DE IMAGEN NATIVA (PILLOW)
+    # -----------------------------------------------------------------
+    def generar_imagen_cancha():
+        # Crear un lienzo oscuro (estilo Bricks / Streamlit dark)
+        ancho, alto = 600, 400
+        img = Image.new("RGB", (ancho, alto), "#0e1117")
+        canvas = ImageDraw.Draw(img)
         
-        if (!contenedorCancha) {{
-            contenedorCancha = document.querySelector(".bloque-captura-cancha-bricks");
-        }}
+        # Intentar cargar fuentes del sistema (si no, usa la default)
+        try:
+            fuente_titulo = ImageFont.truetype("arial.ttf", 24)
+            fuente_sub = ImageFont.truetype("arial.ttf", 18)
+            fuente_texto = ImageFont.truetype("arial.ttf", 16)
+        except:
+            fuente_titulo = fuente_sub = fuente_texto = ImageFont.load_default()
+            
+        # Dibujar bordes decorativos estéticos
+        canvas.rectangle([10, 10, ancho - 10, alto - 10], outline="#31333F", width=3)
         
-        // Si sigue sin encontrarlo, lo extrae rastreando las palabras clave internas
-        if (!contenedorCancha) {{
-            let todosLosDivs = documentoRaiz.querySelectorAll('div');
-            for (let i = 0; i < todosLosDivs.length; i++) {{
-                if (todosLosDivs[i].innerHTML.includes("Matchmaking:") && todosLosDivs[i].innerHTML.includes("🔵 Eq 1")) {{
-                    contenedorCancha = todosLosDivs[i];
-                    break;
-                }}
-            }}
-        }}
+        # Encabezado principal
+        canvas.text((30, 25), "🏀 MESA DE DRAFT - MATCH CONFIG", fill="#ffffff", font=fuente_titulo)
+        canvas.line([(30, 60), (ancho - 30, 60)], fill="#31333F", width=2)
+        
+        # --- EQUIPO 1 (COLUMNA IZQUIERDA) ---
+        canvas.text((40, 80), "🔵 EQUIPO 1", fill="#1f77b4", font=fuente_sub)
+        y_pos = 115
+        for jug, rol in st.session_state.draft_manual["Equipo 1"]:
+            canvas.text((50, y_pos), f"• {jug} ({rol})", fill="#e2e8f0", font=fuente_texto)
+            y_pos += 30
+        if not st.session_state.draft_manual["Equipo 1"]:
+            canvas.text((50, 115), "(Sin jugadores)", fill="#64748b", font=fuente_texto)
+            
+        # --- EQUIPO 2 (COLUMNA DERECHA) ---
+        canvas.text((320, 80), "🔴 EQUIPO 2", fill="#ff4b4b", font=fuente_sub)
+        y_pos = 115
+        for jug, rol in st.session_state.draft_manual["Equipo 2"]:
+            canvas.text((330, y_pos), f"• {jug} ({rol})", fill="#e2e8f0", font=fuente_texto)
+            y_pos += 30
+        if not st.session_state.draft_manual["Equipo 2"]:
+            canvas.text((330, 115), "(Sin jugadores)", fill="#64748b", font=fuente_texto)
+            
+        # --- PIE DE PÁGINA: MATCHMAKING ---
+        canvas.line([(30, 330), (ancho - 30, 330)], fill="#31333F", width=2)
+        canvas.text((30, 350), f"🔑 MATCHMAKING CODE:  {codigo_actual}", fill="#2ecc71", font=fuente_sub)
+        
+        # Guardar en caché temporal para el botón
+        ruta_temp = "cancha_temp.png"
+        img.save(ruta_temp)
+        return ruta_temp
 
-        if (contenedorCancha) {{
-            html2canvas(contenedorCancha, {{
-                backgroundColor: "#0e1117",
-                scale: 2, // Súper resolución nítida para OBS
-                logging: false,
-                useCORS: true,
-                allowTaint: true
-            }}).then(function(canvas) {{
-                let linkFicticio = document.createElement('a');
-                linkFicticio.download = 'Cancha_Match_{codigo_actual}.png';
-                linkFicticio.href = canvas.toDataURL("image/png");
-                linkFicticio.click();
-            }});
-        }} else {{
-            alert("⚠️ No se pudo fijar la cancha. ¡Hacé click en la pantalla de la app primero y volvé a intentar!");
-        }}
-    }}
-    </script>
-    """
-    components.html(html_boton_screenshot, height=65)
+    # Generamos la foto en segundo plano y la dejamos lista para descargar
+    try:
+        archivo_foto = generar_imagen_cancha()
+        with open(archivo_foto, "rb") as file:
+            btn_descarga = st.download_button(
+                label="📸 CAPTURAR CANCHA (FOTO PNG)",
+                data=file,
+                file_name=f"Cancha_Match_{codigo_actual}.png",
+                mime="image/png",
+                use_container_width=True,
+                type="primary"
+            )
+    except Exception as e:
+        st.error(f"Error generando imagen: {e}")
+
+    st.write("")
 
     if es_admin_stream:
         st.markdown("**📝 Marcador Final:**")
