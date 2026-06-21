@@ -3,6 +3,7 @@ import streamlit.components.v1 as components
 import random
 import json
 import os
+from PIL import Image, ImageDraw, ImageFont # <--- AGREGAR ESTO
 
 # Configuración de la página web (Forzamos diseño ancho)
 st.set_page_config(page_title="Draft a la carta", layout="wide")
