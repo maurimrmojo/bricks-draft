@@ -38,8 +38,11 @@ if "historial_partidos" not in st.session_state: st.session_state.historial_part
 if "draft_manual" not in st.session_state: st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
 if "lista_espera_forzada" not in st.session_state: st.session_state.lista_espera_forzada = []
 
+# NUEVO: Contador independiente para los códigos diarios
+if "contador_codigo_dia" not in st.session_state: st.session_state.contador_codigo_dia = 0
+
 cant_partidos = len(st.session_state.historial_partidos)
-codigo_actual = CODIGOS_MATCHMAKING[cant_partidos % len(CODIGOS_MATCHMAKING)]
+codigo_actual = CODIGOS_MATCHMAKING[st.session_state.contador_codigo_dia % len(CODIGOS_MATCHMAKING)]
 
 # =====================================================================
 # BARRA LATERAL Y LOGIN (GESTIÓN DE NAVEGACIÓN PRINCIPAL)
@@ -67,6 +70,12 @@ if st.sidebar.button("🔄 Sincronizar Datos", use_container_width=True):
     datos_actualizados = cargar_datos_globales()
     st.session_state.jugadores = datos_actualizados["jugadores"]
     st.session_state.historial_partidos = datos_actualizados["historial_partidos"]
+    st.rerun()
+
+# NUEVO: Botón para reiniciar la secuencia de códigos diarios
+if st.sidebar.button("♻️ Reiniciar Códigos (Nuevo Día)", type="primary", use_container_width=True):
+    st.session_state.contador_codigo_dia = 0
+    st.toast("¡Secuencia de códigos reseteada a 1q2w!", icon="✅")
     st.rerun()
 
 # Estructura de navegación para poder ocultar la Convocatoria dinámicamente
@@ -144,7 +153,7 @@ if seccion_actual == "📋 Administración Total":
                         st.write("") 
                         if st.button("🗑️ Eliminar", key=f"del_{j}", use_container_width=True, type="primary"):
                             del st.session_state.jugadores[j]
-                            guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                            guardar_datos_globales(st.session_state.historial_partidos, st.session_state.historial_partidos)
                             st.rerun()
 
     with tab_historial:
@@ -234,7 +243,7 @@ elif seccion_actual == "✍️ Armado 100% a Mano":
 
         with sub_col_espera_fija:
             st.markdown("📋 **Lista de Espera**")
-            banco_actual = st.session_state.lista_espera_forzada
+            banco_actual = st.session_state.lista_espera_forzada.copy()
             while len(banco_actual) < 9:
                 banco_actual.append("---")
                 
@@ -512,7 +521,7 @@ with col_derecha:
         canvas.rectangle([10, 10, ancho - 10, alto - 10], outline="#31333F", width=3)
         
         # Encabezado principal
-        canvas.text((30, 25), "🏀 MESA DE DRAFT - MATCH CONFIG", fill="#ffffff", font=fuente_titulo)
+        canvas.text((30, 25), "🏀 DRAFT A LA CARTA", fill="#ffffff", font=fuente_titulo)
         canvas.line([(30, 60), (ancho - 30, 60)], fill="#31333F", width=2)
         
         # --- EQUIPO 1 (COLUMNA IZQUIERDA) ---
@@ -575,6 +584,9 @@ with col_derecha:
                 "Codigo Usado": codigo_actual
             })
             guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+            
+            # NUEVO: Avanza al siguiente código de la lista para el próximo partido
+            st.session_state.contador_codigo_dia += 1
             
             if res_eq1 > res_eq2:
                 equipo_a_reemplazar = "Equipo 2"
