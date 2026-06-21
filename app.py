@@ -14,6 +14,9 @@ PASSWORD_STREAM = "bricks2026"
 PASSWORD_MAESTRA = "bricks2026admin"
 ARCHIVO_BD = "datos_draft.json"
 
+# Lista de códigos de emparejamiento secuenciales proporcionados en orden
+CODIGOS_MATCHMAKING = ["1q2w", "2w3e", "3e4r", "4r5t", "5t6y", "6y7u", "7u8i", "8i9o", "9o0p"]
+
 # --- FUNCIONES DE PERSISTENCIA ---
 def cargar_datos_globales():
     if os.path.exists(ARCHIVO_BD):
@@ -34,6 +37,11 @@ datos_guardados = cargar_datos_globales()
 if "jugadores" not in st.session_state: st.session_state.jugadores = datos_guardados["jugadores"]
 if "historial_partidos" not in st.session_state: st.session_state.historial_partidos = datos_guardados["historial_partidos"]
 if "draft_manual" not in st.session_state: st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
+
+# Determinar qué código corresponde según la cantidad de partidos ya guardados
+cant_partidos = len(st.session_state.historial_partidos)
+# Si se supera la cantidad de códigos, vuelve a empezar la lista de forma circular (módulo)
+codigo_actual = CODIGOS_MATCHMAKING[cant_partidos % len(CODIGOS_MATCHMAKING)]
 
 # =====================================================================
 # BARRA LATERAL Y LOGIN
@@ -96,18 +104,16 @@ if seccion_actual == "📋 Administración Total":
             for j in sorted(list(st.session_state.jugadores.keys())):
                 puntos = st.session_state.jugadores[j]
                 
-                # Formato Carnet visualmente ordenado en una mini-tabla o caja
                 with st.container(border=True):
                     c_info, c_action = st.columns([3, 1])
                     with c_info:
                         st.markdown(f"### 🪪 {j}")
-                        # Mostramos las posiciones alineadas tipo tarjeta
                         st.code(
                             f"PG: {puntos.get('PG', 0)} | SG: {puntos.get('SG', 0)} | SF: {puntos.get('SF', 0)} | PF: {puntos.get('PF', 0)} | C: {puntos.get('C', 0)}",
                             language="text"
                         )
                     with c_action:
-                        st.write("") # Espaciador visual para centrar el botón
+                        st.write("") 
                         if st.button("🗑️ Eliminar", key=f"del_{j}", use_container_width=True, type="primary"):
                             del st.session_state.jugadores[j]
                             guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
@@ -191,6 +197,9 @@ else:
     pos_cubiertas_eq1 = [j[1] for j in st.session_state.draft_manual["Equipo 1"]]
     pos_cubiertas_eq2 = [j[1] for j in st.session_state.draft_manual["Equipo 2"]]
 
+    # Validamos si los dos equipos ya están llenos (5 en cada uno) para aplicar el bloqueo
+    equipos_listos = (len(st.session_state.draft_manual["Equipo 1"]) == 5 and len(st.session_state.draft_manual["Equipo 2"]) == 5)
+
     # -----------------------------------------------------------------
     # COLUMNA 2: RUCOLO Y HERRAMIENTAS DE SORTEO (CENTRO)
     # -----------------------------------------------------------------
@@ -200,56 +209,60 @@ else:
             pestana1, pestana2 = st.tabs(["🎯 Sorteo Auto Balanced", "🎡 Ruleta Interactiva"])
             
             with pestana1:
-                if st.button("🚀 Ejecutar Algoritmo de Sorteo", type="primary", use_container_width=True):
-                    if len(presentes) < 10:
-                        st.warning("Se necesitan mínimo 10 jugadores.")
-                    else:
-                        pool = presentes.copy()
-                        mejor_comb = None
-                        menor_dif = 9999
-                        
-                        for _ in range(3000):
-                            random.shuffle(pool)
-                            eq1, eq2 = [], []
-                            s1, s2 = 0, 0
-                            disponibles = pool.copy()
-                            error_posicion = False
-                            
-                            for r in roles_totales:
-                                elegido = next((j for j in disponibles if r in jugadores_fecha_perfiles.get(j, {})), None)
-                                if elegido:
-                                    eq1.append((elegido, r))
-                                    s1 += jugadores_fecha_perfiles[elegido][r]
-                                    disponibles.remove(elegido)
-                                else:
-                                    error_posicion = True
-                                    break
-                            
-                            if error_posicion: continue
-                            
-                            for i, r in enumerate(roles_totales):
-                                elegido = disponibles[i]
-                                if r in jugadores_fecha_perfiles.get(elegido, {}):
-                                    eq2.append((elegido, r))
-                                    s2 += jugadores_fecha_perfiles[elegido][r]
-                                else:
-                                    error_posicion = True
-                                    break
-                                    
-                            if not error_posicion and len(eq1) == 5 and len(eq2) == 5:
-                                if abs(s1 - s2) < menor_dif:
-                                    menor_dif = abs(s1 - s2)
-                                    mejor_comb = (eq1, eq2, s1, s2)
-                                    
-                        if mejor_comb:
-                            st.session_state.draft_manual["Equipo 1"] = mejor_comb[0]
-                            st.session_state.draft_manual["Equipo 2"] = mejor_comb[1]
-                            st.session_state.draft_manual["Suma 1"] = mejor_comb[2]
-                            st.session_state.draft_manual["Suma 2"] = mejor_comb[3]
-                            st.success("¡Equipos armados y balanceados!")
-                            st.rerun()
+                # REQUERIMIENTO: Si ya se armaron los equipos, se bloquea la ejecución automática del algoritmo
+                if equipos_listos:
+                    st.info("🔒 **Equipos armados correctamente.** Sorteo automático bloqueado para evitar cambios accidentales. Usa los ajustes manuales si necesitas un cambio.")
+                else:
+                    if st.button("🚀 Ejecutar Algoritmo de Sorteo", type="primary", use_container_width=True):
+                        if len(presentes) < 10:
+                            st.warning("Se necesitan mínimo 10 jugadores.")
                         else:
-                            st.error("Roster trabado. Habilita más posiciones dinámicas.")
+                            pool = presentes.copy()
+                            mejor_comb = None
+                            menor_dif = 9999
+                            
+                            for _ in range(3000):
+                                random.shuffle(pool)
+                                eq1, eq2 = [], []
+                                s1, s2 = 0, 0
+                                disponibles = pool.copy()
+                                error_posicion = False
+                                
+                                for r in roles_totales:
+                                    elegido = next((j for j in disponibles if r in jugadores_fecha_perfiles.get(j, {})), None)
+                                    if elegido:
+                                        eq1.append((elegido, r))
+                                        s1 += jugadores_fecha_perfiles[elegido][r]
+                                        disponibles.remove(elegido)
+                                    else:
+                                        error_posicion = True
+                                        break
+                                
+                                if error_posicion: continue
+                                
+                                for i, r in enumerate(roles_totales):
+                                    elegido = disponibles[i]
+                                    if r in jugadores_fecha_perfiles.get(elegido, {}):
+                                        eq2.append((elegido, r))
+                                        s2 += jugadores_fecha_perfiles[elegido][r]
+                                    else:
+                                        error_posicion = True
+                                        break
+                                        
+                                if not error_posicion and len(eq1) == 5 and len(eq2) == 5:
+                                    if abs(s1 - s2) < menor_dif:
+                                        menor_dif = abs(s1 - s2)
+                                        mejor_comb = (eq1, eq2, s1, s2)
+                                        
+                            if mejor_comb:
+                                st.session_state.draft_manual["Equipo 1"] = mejor_comb[0]
+                                st.session_state.draft_manual["Equipo 2"] = mejor_comb[1]
+                                st.session_state.draft_manual["Suma 1"] = mejor_comb[2]
+                                st.session_state.draft_manual["Suma 2"] = mejor_comb[3]
+                                st.success("¡Equipos armados y balanceados!")
+                                st.rerun()
+                            else:
+                                st.error("Roster trabado. Habilita más posiciones dinámicas.")
 
             with pestana2:
                 posicion_a_sortear = st.selectbox("Posición a sortear:", roles_totales)
@@ -418,11 +431,15 @@ else:
                         st.session_state.draft_manual["Equipo 2"].pop(idx)
                         st.rerun()
 
-        # Copiar a Discord compacto
+        # REQUERIMIENTO: Mostrar dinámicamente el código de emparejamiento actual de la sesión
+        st.markdown(f"🔑 **Código de Emparejamiento Actual:** `{codigo_actual}`")
+
+        # Copiar a Discord compacto (Incluye el código automático arriba)
         dict_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
         dict_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
         
-        texto_plano = "POS | EQUIPO 1       | EQUIPO 2\n"
+        texto_plano = f"🔑 CÓDIGO DE PARTIDO: {codigo_actual}\n"
+        texto_plano += "POS | EQUIPO 1       | EQUIPO 2\n"
         for pos in roles_totales:
             p1 = dict_e1.get(pos, '---').ljust(14)
             p2 = dict_e2.get(pos, '---')
@@ -440,10 +457,13 @@ else:
                 nombres_e2 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 2"]])
                 st.session_state.historial_partidos.append({
                     "Equipos": f"🔵 ({nombres_e1}) VS 🔴 ({nombres_e2})",
-                    "Resultado": f"{res_eq1} - {res_eq2}"
+                    "Resultado": f"{res_eq1} - {res_eq2}",
+                    "Codigo Usado": codigo_actual
                 })
                 guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                st.success("¡Guardado!")
+                # Al limpiar la mesa se calcula el siguiente código automáticamente gracias al historial actualizado
+                st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
+                st.success("¡Partido archivado! El código rotará automáticamente para la próxima ronda.")
                 st.rerun()
 
             if st.session_state.historial_partidos:
@@ -466,6 +486,7 @@ else:
         for idx, part in enumerate(reversed(st.session_state.historial_partidos)):
             col_lado = columnas_historial[idx % 2]
             num_partido = len(st.session_state.historial_partidos) - idx
-            col_lado.info(f"**Partido #{num_partido}:** {part['Equipos']} ➔ **Marcador: {part['Resultado']}**")
+            cod_info = f" (Cod: {part.get('Codigo Usado', 'N/A')})"
+            col_lado.info(f"**Partido #{num_partido}{cod_info}:** {part['Equipos']} ➔ **Marcador: {part['Resultado']}**")
     else:
         st.write("*Todavía no hay partidos archivados en esta sesión.*")
