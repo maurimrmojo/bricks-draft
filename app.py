@@ -159,7 +159,6 @@ else:
                     pos_originales = list(st.session_state.jugadores[jug].keys())
                     roles_activos_hoy = []
                     
-                    # Generamos checks en linea fina para ahorrar espacio
                     sub_cols = st.columns(len(pos_originales))
                     for idx_pos, pos in enumerate(pos_originales):
                         with sub_cols[idx_pos]:
@@ -173,7 +172,6 @@ else:
                     else:
                         jugadores_fecha_perfiles[jug] = st.session_state.jugadores[jug]
 
-    # Variables globales de control para la ruleta y sorteo externo
     roles_totales = ["PG", "SG", "SF", "PF", "C"]
     ya_drafteados = [j[0] for j in st.session_state.draft_manual["Equipo 1"]] + [j[0] for j in st.session_state.draft_manual["Equipo 2"]]
     libres_hoy = [j for j in presentes if j not in ya_drafteados]
@@ -277,6 +275,10 @@ else:
                     ganador = st.session_state.ganador_ruleta if st.session_state.ganador_ruleta in candidatos else candidatos[0]
                     idx_ganador = candidatos.index(ganador)
 
+                    # Corregido: pasamos los datos serializados limpiamente sin romper strings triples
+                    js_candidatos = json.dumps(candidatos)
+                    js_colores = json.dumps(lista_colores)
+
                     html_ruleta = f"""
                     <div style="text-align: center; background-color: #0e1117; padding: 5px; border-radius: 10px;">
                         <div style="position: relative; display: inline-block;">
@@ -288,8 +290,8 @@ else:
                         <h4 id="txtResultado" style="margin-top: 5px; color: #0e1117; min-height: 20px;">.</h4>
                     </div>
                     <script>
-                        const candidatos = {json_dumps := json.dumps(candidatos)};
-                        const colores = {json.dumps(lista_colores)};
+                        const candidatos = {js_candidatos};
+                        const colores = {js_colores};
                         const idxGanador = {idx_ganador};
                         const canvas = document.getElementById("canvasRuleta");
                         const ctx = canvas.getContext("2d");
@@ -338,7 +340,6 @@ else:
                 else:
                     st.markdown("🔒 *No hay candidatos válidos libres.*")
 
-            # Inyección a mano directo abajo de las pestañas
             st.write("---")
             st.write("**Agregar a Mano:**")
             if libres_hoy:
@@ -372,7 +373,9 @@ else:
         with st.container(height=340, border=True):
             sub_col1, sub_col2 = st.columns(2)
             with sub_col1:
-                st.markdown(f"### 🔵 Eq 1 {f'({st.session_state.draft_manual[\"Suma 1\"]})' if ver_puntos else ''}")
+                # Corregido: Limpiamos las comillas complejas de la f-string de Streamlit
+                txt_e1 = f"### 🔵 Eq 1 ({st.session_state.draft_manual['Suma 1']})" if ver_puntos else "### 🔵 Eq 1"
+                st.markdown(txt_e1)
                 for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 1"]):
                     pts = st.session_state.jugadores[jug].get(rol, 0)
                     c_txt, c_x = st.columns([4, 1])
@@ -383,7 +386,9 @@ else:
                         st.rerun()
                         
             with sub_col2:
-                st.markdown(f"### 🔴 Eq 2 {f'({st.session_state.draft_manual[\"Suma 2\"]})' if ver_puntos else ''}")
+                # Corregido: Igual acá, evitamos escapar comillas anidadas en Markdown
+                txt_e2 = f"### 🔴 Eq 2 ({st.session_state.draft_manual['Suma 2']})" if ver_puntos else "### 🔴 Eq 2"
+                st.markdown(txt_e2)
                 for idx, (jug, rol) in enumerate(st.session_state.draft_manual["Equipo 2"]):
                     pts = st.session_state.jugadores[jug].get(rol, 0)
                     c_txt, c_x = st.columns([4, 1])
@@ -396,9 +401,13 @@ else:
         # Copiar a Discord compacto
         dict_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
         dict_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
+        
+        # Corregido: Armamos el bloque de texto plano de forma segura sin f-string triple rota
         texto_plano = "POS | EQUIPO 1       | EQUIPO 2\n"
         for pos in roles_totales:
-            texto_plano += f"{pos.ljust(3)} : {dict_e1.get(pos, '---').ljust(14)} vs {dict_e2.get(pos, '---')}\n"
+            p1 = dict_e1.get(pos, '---').ljust(14)
+            p2 = dict_e2.get(pos, '---')
+            texto_plano += f"{pos.ljust(3)} : {p1} vs {p2}\n"
         st.code(texto_plano, language="text")
 
         # Registro del Marcador Final en vivo
@@ -418,7 +427,6 @@ else:
                 st.success("¡Guardado!")
                 st.rerun()
 
-            # Botón de arrepentimiento express (solo último partido)
             if st.session_state.historial_partidos:
                 with st.expander("🩹 Corregir último score cargado"):
                     ec1, ec2, ec3 = st.columns(3)
@@ -435,7 +443,6 @@ else:
     st.write("---")
     st.header("📜 Historial General de Resultados")
     if st.session_state.historial_partidos:
-        # Se renderiza en columnas para ahorrar scroll vertical también acá abajo
         columnas_historial = st.columns(2)
         for idx, part in enumerate(reversed(st.session_state.historial_partidos)):
             col_lado = columnas_historial[idx % 2]
