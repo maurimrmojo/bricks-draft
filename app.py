@@ -78,16 +78,19 @@ if st.sidebar.button("♻️ Reiniciar Códigos (Nuevo Día)", type="primary", u
     st.toast("¡Secuencia de códigos reseteada a 1q2w!", icon="✅")
     st.rerun()
 
-# Estructura de navegación para poder ocultar la Convocatoria dinámicamente
+# Estructura de navegación dinámica
 opciones_menu = []
 if es_super_admin:
     opciones_menu.append("📋 Administración Total")
 
-# Ponemos las herramientas directamente en el control de navegación
+# Ponemos las herramientas de acuerdo al rol
 if es_admin_stream:
     opciones_menu.extend(["🎯 Sorteo Auto Balanced", "🎡 Ruleta Interactive", "✍️ Armado 100% a Mano"])
 else:
     opciones_menu.append("🏀 Ver Mesa de Draft (Espectador)")
+
+# AGREGADO: El historial se incluye siempre al final para que los espectadores tengan acceso directo
+opciones_menu.append("📜 Historial de Partidos")
 
 seccion_actual = st.sidebar.radio("Seleccionar Sección / Herramienta:", opciones_menu)
 
@@ -180,10 +183,27 @@ if seccion_actual == "📋 Administración Total":
             st.info("No hay partidos registrados en la base de datos.")
 
 # =====================================================================
-# VENTANA: MESA DE DRAFT (CONFIGURACIÓN DINÁMICA DE COLUMNAS)
+# NUEVA VENTANA: SECCIÓN HISTORIAL GENERAL DE ACCESO EXCLUSIVO / COMÚN
+# =====================================================================
+elif seccion_actual == "📜 Historial de Partidos":
+    st.title("📜 Historial General de Resultados")
+    st.markdown("Revisá todos los partidos jugados y los códigos de matchmaking utilizados en la fecha actual.")
+    st.write("---")
+    
+    if st.session_state.historial_partidos:
+        columnas_historial = st.columns(2)
+        for idx, part in enumerate(reversed(st.session_state.historial_partidos)):
+            col_lado = columnas_historial[idx % 2]
+            num_partido = len(st.session_state.historial_partidos) - idx
+            cod_info = f" (Cod: {part.get('Codigo Usado', 'N/A')})"
+            col_lado.info(f"**Partido #{num_partido}{cod_info}:** {part['Equipos']} ➔ **Marcador: {part['Resultado']}**")
+    else:
+        st.info("💡 Todavía no hay partidos archivados registrados en el sistema.")
+
+# =====================================================================
+# VENTANA: MESA DE DRAFT (ARMADO MANUAL)
 # =====================================================================
 elif seccion_actual == "✍️ Armado 100% a Mano":
-    # MODO CONFIGURACIÓN REQUERIDO: Oculta convocatoria, usa 2 columnas anchas
     st.title("🏀 Mesa de Draft (Armado Manual)")
     col_centro, col_derecha = st.columns([2.3, 1.3])
     
@@ -259,7 +279,7 @@ elif seccion_actual == "✍️ Armado 100% a Mano":
             st.rerun()
 
 else:
-    # MODO JUEGO REGULAR: Muestra las 3 columnas tradicionales (Convocatoria activa)
+    # MODO JUEGO REGULAR / ESPECTADOR DE DRAFT: Muestra las 3 columnas tradicionales
     st.title("🏀 Mesa de Draft a la Carta")
     col_izquierda, col_centro, col_derecha = st.columns([1.1, 1.4, 1.1])
     
@@ -293,7 +313,7 @@ else:
     with col_centro:
         st.header("🎡 Herramientas")
         if not es_admin_stream:
-            st.warning("Modo Espectador activo.")
+            st.warning("Modo Espectador activo. Revisá las tácticas de los equipos en el panel lateral.")
         elif seccion_actual == "🎯 Sorteo Auto Balanced":
             if equipos_listos:
                 st.info("🔒 **Equipos armados.** Sorteo bloqueado.")
@@ -463,9 +483,9 @@ else:
 
 # =====================================================================
 # BLOQUE COMÚN REUTILIZABLE: RENDERIZADO DE CANCHA (COLUMNA DERECHA)
-# Solo se muestra en las herramientas de Draft (No en Administración Total)
+# Solo se muestra en pantallas operativas de Draft (No en Admin o Historial)
 # =====================================================================
-if seccion_actual != "📋 Administración Total":
+if seccion_actual not in ["📋 Administración Total", "📜 Historial de Partidos"]:
     with col_derecha:
         st.header("🔥 Control")
         
@@ -632,18 +652,3 @@ if seccion_actual != "📋 Administración Total":
                         st.session_state.historial_partidos[-1]["Resultado"] = f"{er1} - {er2}"
                         guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                         st.rerun()
-
-# =====================================================================
-# SECCIÓN INFERIOR: HISTORIAL DE RESULTADOS GLOBAL CONSTANTE
-# =====================================================================
-st.write("---")
-st.header("📜 Historial General de Resultados")
-if st.session_state.historial_partidos:
-    columnas_historial = st.columns(2)
-    for idx, part in enumerate(reversed(st.session_state.historial_partidos)):
-        col_lado = columnas_historial[idx % 2]
-        num_partido = len(st.session_state.historial_partidos) - idx
-        cod_info = f" (Cod: {part.get('Codigo Usado', 'N/A')})"
-        col_lado.info(f"**Partido #{num_partido}{cod_info}:** {part['Equipos']} ➔ **Marcador: {part['Resultado']}**")
-else:
-    st.write("*Todavía no hay partidos archivados en esta sesión.*")
