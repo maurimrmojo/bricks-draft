@@ -495,12 +495,10 @@ with col_derecha:
     # MOTOR DE GENERACIÓN DE IMAGEN NATIVA (PILLOW)
     # -----------------------------------------------------------------
     def generar_imagen_cancha():
-        # Crear un lienzo oscuro (estilo Bricks / Streamlit dark)
         ancho, alto = 600, 400
         img = Image.new("RGB", (ancho, alto), "#0e1117")
         canvas = ImageDraw.Draw(img)
         
-        # Intentar cargar fuentes del sistema (si no, usa la default)
         try:
             fuente_titulo = ImageFont.truetype("arial.ttf", 24)
             fuente_sub = ImageFont.truetype("arial.ttf", 18)
@@ -508,14 +506,10 @@ with col_derecha:
         except:
             fuente_titulo = fuente_sub = fuente_texto = ImageFont.load_default()
             
-        # Dibujar bordes decorativos estéticos
         canvas.rectangle([10, 10, ancho - 10, alto - 10], outline="#31333F", width=3)
-        
-        # Encabezado principal
         canvas.text((30, 25), "🏀 MESA DE DRAFT - MATCH CONFIG", fill="#ffffff", font=fuente_titulo)
         canvas.line([(30, 60), (ancho - 30, 60)], fill="#31333F", width=2)
         
-        # --- EQUIPO 1 (COLUMNA IZQUIERDA) ---
         canvas.text((40, 80), "🔵 EQUIPO 1", fill="#1f77b4", font=fuente_sub)
         y_pos = 115
         for jug, rol in st.session_state.draft_manual["Equipo 1"]:
@@ -524,7 +518,6 @@ with col_derecha:
         if not st.session_state.draft_manual["Equipo 1"]:
             canvas.text((50, 115), "(Sin jugadores)", fill="#64748b", font=fuente_texto)
             
-        # --- EQUIPO 2 (COLUMNA DERECHA) ---
         canvas.text((320, 80), "🔴 EQUIPO 2", fill="#ff4b4b", font=fuente_sub)
         y_pos = 115
         for jug, rol in st.session_state.draft_manual["Equipo 2"]:
@@ -533,16 +526,13 @@ with col_derecha:
         if not st.session_state.draft_manual["Equipo 2"]:
             canvas.text((330, 115), "(Sin jugadores)", fill="#64748b", font=fuente_texto)
             
-        # --- PIE DE PÁGINA: MATCHMAKING ---
         canvas.line([(30, 330), (ancho - 30, 330)], fill="#31333F", width=2)
         canvas.text((30, 350), f"🔑 MATCHMAKING CODE:  {codigo_actual}", fill="#2ecc71", font=fuente_sub)
         
-        # Guardar en caché temporal para el botón
         ruta_temp = "cancha_temp.png"
         img.save(ruta_temp)
         return ruta_temp
 
-    # Generamos la foto en segundo plano y la dejamos lista para descargar
     try:
         archivo_foto = generar_imagen_cancha()
         with open(archivo_foto, "rb") as file:
@@ -593,7 +583,8 @@ with col_derecha:
             banco_simulado = lista_espera.copy()
             
             for r_liberado in roles_perdedores:
-                candidato_banco = next((j for j in banco_simulado if r_liberado in jugadores_fecha_perfiles.get(j, {})), None)
+                # Modificado: Busca primero en perfiles del día, si no está (manual) cae en el roster global seguro
+                candidato_banco = next((j for j in banco_simulado if r_liberado in jugadores_fecha_perfiles.get(j, st.session_state.jugadores.get(j, {}))), None)
                 if candidato_banco:
                     nuevo_equipo_reemplazo.append((candidato_banco, r_liberado))
                     banco_simulado.remove(candidato_banco)
@@ -603,8 +594,9 @@ with col_derecha:
                         nuevo_equipo_reemplazo.append((candidato_banco, r_liberado))
                         banco_simulado.remove(candidato_banco)
             
-            suma_fijo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores[j[0]]).get(j[1], 0) for j in st.session_state.draft_manual[equipo_fijo]])
-            suma_reemplazo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores[j[0]]).get(j[1], 0) for j in nuevo_equipo_reemplazo])
+            # Modificado: Cálculo de sumas protegido con .get() alternativo para evitar KeyErrors
+            suma_fijo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores.get(j[0], {})).get(j[1], 0) for j in st.session_state.draft_manual[equipo_fijo]])
+            suma_reemplazo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores.get(j[0], {})).get(j[1], 0) for j in nuevo_equipo_reemplazo])
             
             st.session_state.draft_manual[equipo_a_reemplazar] = nuevo_equipo_reemplazo
             if equipo_fijo == "Equipo 1":
