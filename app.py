@@ -40,6 +40,10 @@ if "historial_partidos" not in st.session_state: st.session_state.historial_part
 if "draft_manual" not in st.session_state: st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
 if "lista_espera_forzada" not in st.session_state: st.session_state.lista_espera_forzada = []
 
+# Inicialización de la cuadrícula libre de 30 casilleros (3 filas x 10 columnas)
+if "grid_libre_manual" not in st.session_state:
+    st.session_state.grid_libre_manual = {f"c_{i}": "" for i in range(1, 31)}
+
 # Contador independiente para los códigos diarios
 if "contador_codigo_dia" not in st.session_state: st.session_state.contador_codigo_dia = 0
 
@@ -173,7 +177,7 @@ if seccion_actual == "📋 Administración Total":
                 guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                 st.warning("Partido removido del historial.")
                 st.rerun()
-            with c_edit.expander("✏️ Editar Marcador de este Partido"):
+            with c_edit.edit_marcadores.expander("✏️ Editar Marcador de este Partido"):
                 n_res1 = st.number_input("Nuevo Score Eq 1", value=0, key="adm_score_1")
                 n_res2 = st.number_input("Nuevo Score Eq 2", value=0, key="adm_score_2")
                 if st.button("Aplicar Corrección Forzada", use_container_width=True):
@@ -207,6 +211,33 @@ elif seccion_actual == "📜 Historial de Partidos":
 # =====================================================================
 elif seccion_actual == "✍️ Armado 100% a Mano":
     st.title("🏀 Mesa de Draft (Armado Manual)")
+    
+    # --- NUEVO BLOQUE: CASILLEROS ESTILO EXCEL LIBRES ---
+    with st.expander("📝 Borrador Rápido (Cuadrícula Estilo Excel Libre)", expanded=True):
+        st.markdown("<small style='color:gray;'>Bloque de anotación rápida de 30 casilleros independientes. No afecta las lógicas automáticas.</small>", unsafe_allow_html=True)
+        
+        # Fila 1 (Casilleros 1 al 10)
+        cols_f1 = st.columns(10)
+        for idx, col in enumerate(cols_f1):
+            c_id = idx + 1
+            st.session_state.grid_libre_manual[f"c_{c_id}"] = col.text_input(f"A{c_id}", value=st.session_state.grid_libre_manual[f"c_{c_id}"], key=f"inp_g_{c_id}", label_visibility="collapsed", placeholder=f"[{c_id}]")
+            
+        # Fila 2 (Casilleros 11 al 20)
+        cols_f2 = st.columns(10)
+        for idx, col in enumerate(cols_f2):
+            c_id = idx + 11
+            st.session_state.grid_libre_manual[f"c_{c_id}"] = col.text_input(f"B{c_id}", value=st.session_state.grid_libre_manual[f"c_{c_id}"], key=f"inp_g_{c_id}", label_visibility="collapsed", placeholder=f"[{c_id}]")
+            
+        # Fila 3 (Casilleros 21 al 30)
+        cols_f3 = st.columns(10)
+        for idx, col in enumerate(cols_f3):
+            c_id = idx + 21
+            st.session_state.grid_libre_manual[f"c_{c_id}"] = col.text_input(f"C{c_id}", value=st.session_state.grid_libre_manual[f"c_{c_id}"], key=f"inp_g_{c_id}", label_visibility="collapsed", placeholder=f"[{c_id}]")
+            
+        if st.button("🧹 Limpiar todos los casilleros", key="clear_excel_grid", size="small"):
+            st.session_state.grid_libre_manual = {f"c_{i}": "" for i in range(1, 31)}
+            st.rerun()
+
     col_centro, col_derecha = st.columns([2.3, 1.3])
     
     with col_centro:
@@ -275,7 +306,7 @@ elif seccion_actual == "✍️ Armado 100% a Mano":
                     st.selectbox(f"⏳ Campo {i}:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[i-1] if banco_actual[i-1] in opciones_busqueda else "---"), key=f"besp_{i}")
 
         # -----------------------------------------------------------------
-        # MODIFICACIÓN NUEVA: RULETA SIMPLE 1vs1 DE ELECCIÓN RÁPIDA
+        # RULETA SIMPLE 1vs1 DE ELECCIÓN RÁPIDA
         # -----------------------------------------------------------------
         st.write("---")
         st.subheader("🎡 Ruleta de Elección Rápida (1 vs 1)")
@@ -290,7 +321,7 @@ elif seccion_actual == "✍️ Armado 100% a Mano":
                 st.session_state.ganador_ruleta_manual = None
             
             candidatos_m = [jugador_a, jugador_b]
-            colores_m = ["#4A90E2", "#FF7F0E"]  # Azul claro y naranja para diferenciar
+            colores_m = ["#4A90E2", "#FF7F0E"]
             
             if st.button("🔮 Sincronizar Ruleta 1v1", key="btn_sync_rm", use_container_width=True):
                 st.session_state.ganador_ruleta_manual = random.choice(candidatos_m)
@@ -358,10 +389,11 @@ elif seccion_actual == "✍️ Armado 100% a Mano":
             st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
             st.session_state.lista_espera_forzada = []
             st.session_state.ganador_ruleta_manual = None
+            st.session_state.grid_libre_manual = {f"c_{i}": "" for i in range(1, 31)}
             st.rerun()
 
 else:
-    # MODO JUEGO REGULAR / ESPECTADOR DE DRAFT: Muestra las 3 columnas tradicionales
+    # MODO JUEGO REGULAR / ESPECTADOR DE DRAFT
     st.title("🏀 Mesa de Draft a la Carta")
     col_izquierda, col_centro, col_derecha = st.columns([1.1, 1.4, 1.1])
     
@@ -565,13 +597,11 @@ else:
 
 # =====================================================================
 # BLOQUE COMÚN REUTILIZABLE: RENDERIZADO DE CANCHA (COLUMNA DERECHA)
-# Solo se muestra en pantallas operativas de Draft (No en Admin o Historial)
 # =====================================================================
 if seccion_actual not in ["📋 Administración Total", "📜 Historial de Partidos"]:
     with col_derecha:
         st.header("🔥 Control")
         
-        # Renderizado visual nativo en Streamlit
         with st.container(border=True):
             sub_col1, sub_col2 = st.columns(2)
             with sub_col1:
@@ -605,9 +635,6 @@ if seccion_actual not in ["📋 Administración Total", "📜 Historial de Parti
         st.markdown(f'🔑 **Matchmaking:** `{codigo_actual}`', unsafe_allow_html=True)
         st.write("")
         
-        # -----------------------------------------------------------------
-        # MOTOR DE GENERACIÓN DE IMAGEN NATIVA (PILLOW)
-        # -----------------------------------------------------------------
         def generar_imagen_cancha():
             ancho, alto = 600, 400
             img = Image.new("RGB", (ancho, alto), "#0e1117")
@@ -621,7 +648,6 @@ if seccion_actual not in ["📋 Administración Total", "📜 Historial de Parti
                 fuente_titulo = fuente_sub = fuente_texto = ImageFont.load_default()
                 
             canvas.rectangle([10, 10, ancho - 10, alto - 10], outline="#31333F", width=3)
-            
             canvas.text((30, 25), "🏀 DRAFT A LA CARTA", fill="#ffffff", font=fuente_titulo)
             canvas.line([(30, 60), (ancho - 30, 60)], fill="#31333F", width=2)
             
@@ -644,19 +670,14 @@ if seccion_actual not in ["📋 Administración Total", "📜 Historial de Parti
             canvas.line([(30, 330), (ancho - 30, 330)], fill="#31333F", width=2)
             canvas.text((30, 350), f"🔑 MATCHMAKING CODE:  {codigo_actual}", fill="#2ecc71", font=fuente_sub)
             
-            # Guardamos la imagen en un buffer de bytes en memoria (ideal para pasarlo a base64)
             buffered = BytesIO()
             img.save(buffered, format="PNG")
-            img_bytes = buffered.getvalue()
-            
-            return img_bytes
+            return buffered.getvalue()
 
         try:
-            # Obtenemos los bytes de la imagen generada dinámicamente
             bytes_cancha = generar_imagen_cancha()
             b64_cancha = base64.b64encode(bytes_cancha).decode()
             
-            # 1. Botón nativo de copia directa por JavaScript
             html_boton_copiar = f"""
             <div style="text-align: center; margin-bottom: 8px;">
                 <button id="btnCopiarPortapapeles" style="width: 100%; background-color: #4A90E2; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-family: sans-serif;">
@@ -688,7 +709,6 @@ if seccion_actual not in ["📋 Administración Total", "📜 Historial de Parti
             """
             components.html(html_boton_copiar, height=48)
             
-            # 2. Mantener opción de backup por descarga tradicional por las dudas
             st.download_button(
                 label="📥 O GUARDAR FOTO COMO ARCHIVO (PNG)",
                 data=bytes_cancha,
@@ -719,7 +739,6 @@ if seccion_actual not in ["📋 Administración Total", "📜 Historial de Parti
                     "Codigo Usado": codigo_actual
                 })
                 guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                
                 st.session_state.contador_codigo_dia += 1
                 
                 if res_eq1 > res_eq2:
