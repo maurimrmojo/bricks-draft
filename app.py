@@ -274,10 +274,90 @@ elif seccion_actual == "✍️ Armado 100% a Mano":
                 for i in range(1, 10):
                     st.selectbox(f"⏳ Campo {i}:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[i-1] if banco_actual[i-1] in opciones_busqueda else "---"), key=f"besp_{i}")
 
+        # -----------------------------------------------------------------
+        # MODIFICACIÓN NUEVA: RULETA SIMPLE 1vs1 DE ELECCIÓN RÁPIDA
+        # -----------------------------------------------------------------
+        st.write("---")
+        st.subheader("🎡 Ruleta de Elección Rápida (1 vs 1)")
+        st.markdown("Sorteá de forma simple quién elige primero entre dos jugadores de la misma posición.")
+        
+        c_r1, c_r2 = st.columns(2)
+        jugador_a = c_r1.selectbox("Jugador A:", opciones_busqueda, key="rm_ja")
+        jugador_b = c_r2.selectbox("Jugador B:", opciones_busqueda, key="rm_jb")
+        
+        if jugador_a != "---" and jugador_b != "---" and jugador_a != jugador_b:
+            if "ganador_ruleta_manual" not in st.session_state: 
+                st.session_state.ganador_ruleta_manual = None
+            
+            candidatos_m = [jugador_a, jugador_b]
+            colores_m = ["#4A90E2", "#FF7F0E"]  # Azul claro y naranja para diferenciar
+            
+            if st.button("🔮 Sincronizar Ruleta 1v1", key="btn_sync_rm", use_container_width=True):
+                st.session_state.ganador_ruleta_manual = random.choice(candidatos_m)
+            
+            ganador_m = st.session_state.ganador_ruleta_manual if st.session_state.ganador_ruleta_manual in candidatos_m else candidatos_m[0]
+            idx_ganador_m = candidatos_m.index(ganador_m)
+            
+            js_candidatos_m = json.dumps(candidatos_m)
+            js_colores_m = json.dumps(colores_m)
+            
+            html_ruleta_m = f"""
+            <div style="text-align: center; background-color: #0e1117; padding: 5px; border-radius: 10px;">
+                <div style="position: relative; display: inline-block;">
+                    <div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 18px solid #FF4B4B; z-index: 10;"></div>
+                    <canvas id="canvasRuletaM" width="200" height="200" style="border: 3px solid #31333F; border-radius: 50%;"></canvas>
+                </div>
+                <br>
+                <button id="btnGirarM" style="background-color: #2ecc71; color: white; border: none; padding: 8px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top:5px; width: 60%; font-family: sans-serif;">🎡 ¡GIRAR EN STREAM! 🎡</button>
+                <h4 id="txtResultadoM" style="margin-top: 5px; color: #0e1117; min-height: 20px; font-family: sans-serif;">.</h4>
+            </div>
+            <script>
+                const candidatos = {js_candidatos_m};
+                const colores = {js_colores_m};
+                const idxGanador = {idx_ganador_m};
+                const canvas = document.getElementById("canvasRuletaM");
+                const ctx = canvas.getContext("2d");
+                const numGajos = candidatos.length;
+                const angularGajo = (2 * Math.PI) / numGajos;
+                let anguloActual = 0;
+                function dibujar() {{
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    const centro = canvas.width / 2;
+                    for (let i = 0; i < numGajos; i++) {{
+                        const ang_i = anguloActual + (i * angularGajo);
+                        const ang_f = ang_i + angularGajo;
+                        ctx.beginPath(); ctx.moveTo(centro, centro); ctx.arc(centro, centro, centro - 3, ang_i, ang_f);
+                        ctx.fillStyle = colores[i]; ctx.fill(); ctx.stroke();
+                        ctx.save(); ctx.translate(centro, centro); ctx.rotate(ang_i + angularGajo / 2);
+                        ctx.textAlign = "right"; ctx.fillStyle = "white"; ctx.font = "bold 12px sans-serif";
+                        ctx.fillText(candidatos[i], centro - 15, 4); ctx.restore();
+                    }}
+                }}
+                dibujar();
+                document.getElementById("btnGirarM").addEventListener("click", () => {{
+                    document.getElementById("btnGirarM").disabled = true;
+                    const totalAng = (6 * 2 * Math.PI) + (1.5 * Math.PI - (idxGanador * angularGajo) - (angularGajo / 2));
+                    let start = null;
+                    function animar(now) {{
+                        if (!start) start = now; const prog = (now - start) / 3000;
+                        if (prog < 1) {{ anguloActual = (1 - Math.pow(1 - prog, 3)) * totalAng; dibujar(); requestAnimationFrame(animar); }}
+                        else {{ anguloActual = totalAng; dibujar(); const r = document.getElementById("txtResultadoM"); r.innerText = "🎯 ¡Elige primero: " + candidatos[idxGanador] + "!"; r.style.color = "#2ecc71"; }}
+                    }}
+                    requestAnimationFrame(animar);
+                }});
+            </script>
+            """
+            components.html(html_ruleta_m, height=280)
+        elif jugador_a != "---" and jugador_b != "---" and jugador_a == jugador_b:
+            st.warning("⚠️ Seleccioná dos jugadores diferentes para el 1vs1.")
+        else:
+            st.info("💡 Seleccioná dos jugadores arriba para activar la ruleta visual de desempate rápido.")
+
         st.write("---")
         if st.button("❌ Reiniciar Mesa Completa", type="secondary", use_container_width=True):
             st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
             st.session_state.lista_espera_forzada = []
+            st.session_state.ganador_ruleta_manual = None
             st.rerun()
 
 else:
@@ -576,7 +656,6 @@ if seccion_actual not in ["📋 Administración Total", "📜 Historial de Parti
             bytes_cancha = generar_imagen_cancha()
             b64_cancha = base64.b64encode(bytes_cancha).decode()
             
-            # --- MODIFICACIÓN: RENDERIZACIÓN DE ACCIONES EN PARALELO (COPIAR Y DESCARGAR) ---
             # 1. Botón nativo de copia directa por JavaScript
             html_boton_copiar = f"""
             <div style="text-align: center; margin-bottom: 8px;">
