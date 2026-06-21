@@ -3,6 +3,8 @@ import streamlit.components.v1 as components
 import random
 import json
 import os
+import base64
+from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
 # Configuración de la página web (Forzamos diseño ancho)
@@ -89,7 +91,7 @@ if es_admin_stream:
 else:
     opciones_menu.append("🏀 Ver Mesa de Draft (Espectador)")
 
-# AGREGADO: El historial se incluye siempre al final para que los espectadores tengan acceso directo
+# El historial se incluye siempre al final para que los espectadores tengan acceso directo
 opciones_menu.append("📜 Historial de Partidos")
 
 seccion_actual = st.sidebar.radio("Seleccionar Sección / Herramienta:", opciones_menu)
@@ -183,7 +185,7 @@ if seccion_actual == "📋 Administración Total":
             st.info("No hay partidos registrados en la base de datos.")
 
 # =====================================================================
-# NUEVA VENTANA: SECCIÓN HISTORIAL GENERAL DE ACCESO EXCLUSIVO / COMÚN
+# VENTANA: SECCIÓN HISTORIAL GENERAL DE ACCESO EXCLUSIVO / COMÚN
 # =====================================================================
 elif seccion_actual == "📜 Historial de Partidos":
     st.title("📜 Historial General de Resultados")
@@ -562,21 +564,61 @@ if seccion_actual not in ["📋 Administración Total", "📜 Historial de Parti
             canvas.line([(30, 330), (ancho - 30, 330)], fill="#31333F", width=2)
             canvas.text((30, 350), f"🔑 MATCHMAKING CODE:  {codigo_actual}", fill="#2ecc71", font=fuente_sub)
             
-            ruta_temp = "cancha_temp.png"
-            img.save(ruta_temp)
-            return ruta_temp
+            # Guardamos la imagen en un buffer de bytes en memoria (ideal para pasarlo a base64)
+            buffered = BytesIO()
+            img.save(buffered, format="PNG")
+            img_bytes = buffered.getvalue()
+            
+            return img_bytes
 
         try:
-            archivo_foto = generar_imagen_cancha()
-            with open(archivo_foto, "rb") as file:
-                btn_descarga = st.download_button(
-                    label="📸 CAPTURAR CANCHA (FOTO PNG)",
-                    data=file,
-                    file_name=f"Cancha_Match_{codigo_actual}.png",
-                    mime="image/png",
-                    use_container_width=True,
-                    type="primary"
-                )
+            # Obtenemos los bytes de la imagen generada dinámicamente
+            bytes_cancha = generar_imagen_cancha()
+            b64_cancha = base64.b64encode(bytes_cancha).decode()
+            
+            # --- MODIFICACIÓN: RENDERIZACIÓN DE ACCIONES EN PARALELO (COPIAR Y DESCARGAR) ---
+            # 1. Botón nativo de copia directa por JavaScript
+            html_boton_copiar = f"""
+            <div style="text-align: center; margin-bottom: 8px;">
+                <button id="btnCopiarPortapapeles" style="width: 100%; background-color: #4A90E2; color: white; border: none; padding: 10px; font-weight: bold; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-family: sans-serif;">
+                    📋 COPIAR FOTO DIRECTA AL PORTAPAPELES
+                </button>
+            </div>
+            <script>
+                document.getElementById("btnCopiarPortapapeles").addEventListener("click", async () => {{
+                    try {{
+                        const base64Data = "{b64_cancha}";
+                        const byteCharacters = atob(base64Data);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {{
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }}
+                        const byteArray = new Uint8Array(byteNumbers);
+                        const blob = new Blob([byteArray], {{ type: 'image/png' }});
+                        
+                        await navigator.clipboard.write([
+                            new ClipboardItem({{ [blob.type]: blob }})
+                        ]);
+                        parent.postMessage({{type: 'streamlit:toast', value: '¡Cancha copiada al portapapeles! Hacé Ctrl+V en Discord.'}}, '*');
+                    }} catch (err) {{
+                        console.error('Error al copiar:', err);
+                        alert('Error al copiar la imagen de forma automatizada.');
+                    }}
+                }});
+            </script>
+            """
+            components.html(html_boton_copiar, height=48)
+            
+            # 2. Mantener opción de backup por descarga tradicional por las dudas
+            st.download_button(
+                label="📥 O GUARDAR FOTO COMO ARCHIVO (PNG)",
+                data=bytes_cancha,
+                file_name=f"Cancha_Match_{codigo_actual}.png",
+                mime="image/png",
+                use_container_width=True,
+                type="secondary"
+            )
+            
         except Exception as e:
             st.error(f"Error generando imagen: {e}")
 
