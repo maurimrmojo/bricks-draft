@@ -6,6 +6,18 @@ import os
 import base64
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
+import streamlit as st
+
+# Esto sirve para esconder el menú de arriba y que nadie vea el código
+ocultar_menu = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+"""
+st.markdown(ocultar_menu, unsafe_allow_html=True)
+# --- HASTA AQUÍ ---
 
 # Configuración de la página web (Forzamos diseño ancho)
 st.set_page_config(page_title="Draft a la carta", layout="wide")
