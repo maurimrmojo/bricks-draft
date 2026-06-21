@@ -40,7 +40,6 @@ if "draft_manual" not in st.session_state: st.session_state.draft_manual = {"Equ
 
 # Determinar qué código corresponde según la cantidad de partidos ya guardados
 cant_partidos = len(st.session_state.historial_partidos)
-# Si se supera la cantidad de códigos, vuelve a empezar la lista de forma circular (módulo)
 codigo_actual = CODIGOS_MATCHMAKING[cant_partidos % len(CODIGOS_MATCHMAKING)]
 
 # =====================================================================
@@ -160,7 +159,7 @@ else:
         if not st.session_state.jugadores:
             st.warning("No hay jugadores cargados.")
         else:
-            with st.container(height=350, border=True):
+            with st.container(height=280, border=True):
                 for j in sorted(st.session_state.jugadores.keys()):
                     if es_admin_stream:
                         if st.checkbox(f"✔️ {j}", key=f"p_{j}"): presentes.append(j)
@@ -168,11 +167,26 @@ else:
                         if st.checkbox(f"✔️ {j}", key=f"p_{j}", disabled=True): presentes.append(j)
             st.write(f"**Conectados:** {len(presentes)} jugadores.")
         
+        # Identificar quiénes ya están jugando en cancha
+        ya_drafteados = [j[0] for j in st.session_state.draft_manual["Equipo 1"]] + [j[0] for j in st.session_state.draft_manual["Equipo 2"]]
+        
+        # REQUERIMIENTO: Lista de espera con los conectados que no están en los equipos titulares
+        lista_espera = [j for j in presentes if j not in ya_drafteados]
+        
+        st.write("---")
+        st.subheader("📋 Lista de Espera")
+        if lista_espera:
+            with st.container(height=150, border=True):
+                for esp in lista_espera:
+                    st.write(f"⏳ **{esp}**")
+        else:
+            st.caption("No hay nadie esperando en el banco.")
+
         jugadores_fecha_perfiles = {}
         if presentes:
             st.write("---")
             st.subheader("🛠️ Ajuste de Roles hoy")
-            with st.container(height=320, border=True):
+            with st.container(height=280, border=True):
                 for jug in sorted(presentes):
                     st.markdown(f"**⛹️‍♂️ {jug}**")
                     pos_originales = list(st.session_state.jugadores[jug].keys())
@@ -192,16 +206,14 @@ else:
                         jugadores_fecha_perfiles[jug] = st.session_state.jugadores[jug]
 
     roles_totales = ["PG", "SG", "SF", "PF", "C"]
-    ya_drafteados = [j[0] for j in st.session_state.draft_manual["Equipo 1"]] + [j[0] for j in st.session_state.draft_manual["Equipo 2"]]
     libres_hoy = [j for j in presentes if j not in ya_drafteados]
     pos_cubiertas_eq1 = [j[1] for j in st.session_state.draft_manual["Equipo 1"]]
     pos_cubiertas_eq2 = [j[1] for j in st.session_state.draft_manual["Equipo 2"]]
 
-    # Validamos si los dos equipos ya están llenos (5 en cada uno) para aplicar el bloqueo
     equipos_listos = (len(st.session_state.draft_manual["Equipo 1"]) == 5 and len(st.session_state.draft_manual["Equipo 2"]) == 5)
 
     # -----------------------------------------------------------------
-    # COLUMNA 2: RUCOLO Y HERRAMIENTAS DE SORTEO (CENTRO)
+    # COLUMNA 2: RUCOLO Y HERRAMIENTAS DE DRAFT (CENTRO)
     # -----------------------------------------------------------------
     with col_centro:
         st.header("🎡 Herramientas")
@@ -209,9 +221,8 @@ else:
             pestana1, pestana2 = st.tabs(["🎯 Sorteo Auto Balanced", "🎡 Ruleta Interactiva"])
             
             with pestana1:
-                # REQUERIMIENTO: Si ya se armaron los equipos, se bloquea la ejecución automática del algoritmo
                 if equipos_listos:
-                    st.info("🔒 **Equipos armados correctamente.** Sorteo automático bloqueado para evitar cambios accidentales. Usa los ajustes manuales si necesitas un cambio.")
+                    st.info("🔒 **Equipos armados correctamente.** Sorteo automático bloqueado para evitar cambios accidentales. Usa el sistema de rotación automática al archivar.")
                 else:
                     if st.button("🚀 Ejecutar Algoritmo de Sorteo", type="primary", use_container_width=True):
                         if len(presentes) < 10:
@@ -431,7 +442,6 @@ else:
                         st.session_state.draft_manual["Equipo 2"].pop(idx)
                         st.rerun()
 
-        # REQUERIMIENTO: Mostrar dinámicamente el código de emparejamiento actual de la sesión
         st.markdown(f"🔑 **Código de Emparejamiento Actual:** `{codigo_actual}`")
 
         # Copiar a Discord compacto (Incluye el código automático arriba)
@@ -452,18 +462,67 @@ else:
             mc1, mc2, mc3 = st.columns([1.5, 1.5, 2])
             res_eq1 = mc1.number_input("🔵 Eq 1:", min_value=0, value=0, key="scr_1")
             res_eq2 = mc2.number_input("🔴 Eq 2:", min_value=0, value=0, key="scr_2")
+            
+            # REQUERIMIENTO: Al guardar, el perdedor sale y entran los de la Lista de Espera automáticamente
             if mc3.button("💾 archivar", use_container_width=True):
                 nombres_e1 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 1"]])
                 nombres_e2 = ", ".join([j[0] for j in st.session_state.draft_manual["Equipo 2"]])
+                
                 st.session_state.historial_partidos.append({
                     "Equipos": f"🔵 ({nombres_e1}) VS 🔴 ({nombres_e2})",
                     "Resultado": f"{res_eq1} - {res_eq2}",
                     "Codigo Usado": codigo_actual
                 })
                 guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                # Al limpiar la mesa se calcula el siguiente código automáticamente gracias al historial actualizado
-                st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
-                st.success("¡Partido archivado! El código rotará automáticamente para la próxima ronda.")
+                
+                # Identificar equipo perdedor segun el marcador ingresado
+                if res_eq1 > res_eq2:
+                    equipo_a_reemplazar = "Equipo 2"  # Perdió el Equipo 2 (Rojo)
+                    equipo_fijo = "Equipo 1"
+                elif res_eq2 > res_eq1:
+                    equipo_a_reemplazar = "Equipo 1"  # Perdió el Equipo 1 (Azul)
+                    equipo_fijo = "Equipo 2"
+                else:
+                    # En caso de empate técnico, por defecto sale el Equipo 2
+                    equipo_a_reemplazar = "Equipo 2"
+                    equipo_fijo = "Equipo 1"
+                
+                # Guardamos las posiciones del equipo perdedor que se acaban de liberar
+                roles_perdedores = [j[1] for j in st.session_state.draft_manual[equipo_a_reemplazar]]
+                if not roles_perdedores:
+                    roles_perdedores = roles_totales.copy()
+                
+                # Limpiamos el equipo perdedor
+                nuevo_equipo_reemplazo = []
+                banco_simulado = lista_espera.copy()
+                
+                # Buscamos en la lista de espera quién puede cubrir los roles liberados en orden
+                for r_liberado in roles_perdedores:
+                    candidato_banco = next((j for j in banco_simulado if r_liberado in jugadores_fecha_perfiles.get(j, {})), None)
+                    if candidato_banco:
+                        nuevo_equipo_reemplazo.append((candidato_banco, r_liberado))
+                        banco_simulado.remove(candidato_banco)
+                    else:
+                        # Si nadie en el banco cubre ese rol exacto, tomamos al primero disponible en lista de espera
+                        if banco_simulado:
+                            candidato_banco = banco_simulado[0]
+                            nuevo_equipo_reemplazo.append((candidato_banco, r_liberado))
+                            banco_simulado.remove(candidato_banco)
+                
+                # Re-calculamos las sumas de puntos correspondientes para el nuevo ciclo
+                suma_fijo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores[j[0]]).get(j[1], 0) for j in st.session_state.draft_manual[equipo_fijo]])
+                suma_reemplazo = sum([jugadores_fecha_perfiles.get(j[0], st.session_state.jugadores[j[0]]).get(j[1], 0) for j in nuevo_equipo_reemplazo])
+                
+                # Guardamos los cambios estructurales en el estado de la sesión
+                st.session_state.draft_manual[equipo_a_reemplazar] = nuevo_equipo_reemplazo
+                if equipo_fijo == "Equipo 1":
+                    st.session_state.draft_manual["Suma 1"] = suma_fijo
+                    st.session_state.draft_manual["Suma 2"] = suma_reemplazo
+                else:
+                    st.session_state.draft_manual["Suma 1"] = suma_reemplazo
+                    st.session_state.draft_manual["Suma 2"] = suma_fijo
+                
+                st.success("¡Partido guardado! El equipo perdedor ha rotado con la lista de espera.")
                 st.rerun()
 
             if st.session_state.historial_partidos:
