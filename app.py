@@ -37,6 +37,7 @@ datos_guardados = cargar_datos_globales()
 if "jugadores" not in st.session_state: st.session_state.jugadores = datos_guardados["jugadores"]
 if "historial_partidos" not in st.session_state: st.session_state.historial_partidos = datos_guardados["historial_partidos"]
 if "draft_manual" not in st.session_state: st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
+if "lista_espera_forzada" not in st.session_state: st.session_state.lista_espera_forzada = []
 
 # Determinar qué código corresponde según la cantidad de partidos ya guardados
 cant_partidos = len(st.session_state.historial_partidos)
@@ -167,9 +168,13 @@ else:
                         if st.checkbox(f"✔️ {j}", key=f"p_{j}", disabled=True): presentes.append(j)
             st.write(f"**Conectados:** {len(presentes)} jugadores.")
         
-        # Identificar quiénes ya están jugando en cancha
+        # Identificar quiénes ya están jugando en cancha o forzados en lista de espera manual
         ya_drafteados = [j[0] for j in st.session_state.draft_manual["Equipo 1"]] + [j[0] for j in st.session_state.draft_manual["Equipo 2"]]
-        lista_espera = [j for j in presentes if j not in ya_drafteados]
+        
+        if st.session_state.lista_espera_forzada:
+            lista_espera = st.session_state.lista_espera_forzada
+        else:
+            lista_espera = [j for j in presentes if j not in ya_drafteados]
         
         # Ajuste de Roles hoy abajo de Convocatoria
         jugadores_fecha_perfiles = {}
@@ -208,8 +213,7 @@ else:
     with col_centro:
         st.header("🎡 Herramientas")
         if es_admin_stream:
-            # REQUERIMIENTO: Añadida Pestana 3 para armado dinámico 100% a mano escribiendo/buscando
-            pestana1, pestana2, pestana3 = st.tabs(["🎯 Sorteo Auto Balanced", "🎡 Ruleta Interactiva", "✍️ Armado 100% a Mano"])
+            pestana1, pestana2, pestana3 = st.tabs(["🎯 Sorteo Auto Balanced", "🎡 Ruleta Interactive", "✍️ Armado 100% a Mano"])
             
             with pestana1:
                 if equipos_listos:
@@ -219,6 +223,7 @@ else:
                         if len(presentes) < 10:
                             st.warning("Se necesitan mínimo 10 jugadores.")
                         else:
+                            st.session_state.lista_espera_forzada = [] 
                             pool = presentes.copy()
                             mejor_comb = None
                             menor_dif = 9999
@@ -376,7 +381,6 @@ else:
                 st.markdown("✍️ **Escribí o buscá para armar los quintetos completos:**")
                 opciones_busqueda = ["---"] + sorted(list(st.session_state.jugadores.keys()))
                 
-                # Mapeos actuales para pre-cargar si ya hay algo en la mesa
                 dict_actual_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
                 dict_actual_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
                 
@@ -398,8 +402,29 @@ else:
                     b_pf2 = st.selectbox("PF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("PF", "---")), key="bm_pf2")
                     b_c2  = st.selectbox("C:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("C", "---")), key="bm_c2")
                 
+                st.write("---")
+                st.markdown("📋 **Gestión Manual de Lista de Espera (Máx 9 campos):**")
+                
+                banco_actual = st.session_state.lista_espera_forzada
+                while len(banco_actual) < 9:
+                    banco_actual.append("---")
+                
+                cb1, cb2, cb3 = st.columns(3)
+                b_esp1 = cb1.selectbox("⏳ Banco 1:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[0] if banco_actual[0] in opciones_busqueda else "---"), key="besp_1")
+                b_esp2 = cb2.selectbox("⏳ Banco 2:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[1] if banco_actual[1] in opciones_busqueda else "---"), key="besp_2")
+                b_esp3 = cb3.selectbox("⏳ Banco 3:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[2] if banco_actual[2] in opciones_busqueda else "---"), key="besp_3")
+                
+                cb4, cb5, cb6 = st.columns(3)
+                b_esp4 = cb4.selectbox("⏳ Banco 4:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[3] if banco_actual[3] in opciones_busqueda else "---"), key="besp_4")
+                b_esp5 = cb5.selectbox("⏳ Banco 5:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[4] if banco_actual[4] in opciones_busqueda else "---"), key="besp_5")
+                b_esp6 = cb6.selectbox("⏳ Banco 6:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[5] if banco_actual[5] in opciones_busqueda else "---"), key="besp_6")
+                
+                cb7, cb8, cb9 = st.columns(3)
+                b_esp7 = cb7.selectbox("⏳ Banco 7:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[6] if banco_actual[6] in opciones_busqueda else "---"), key="besp_7")
+                b_esp8 = cb8.selectbox("⏳ Banco 8:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[7] if banco_actual[7] in opciones_busqueda else "---"), key="besp_8")
+                b_esp9 = cb9.selectbox("⏳ Banco 9:", opciones_busqueda, index=opciones_busqueda.index(banco_actual[8] if banco_actual[8] in opciones_busqueda else "---"), key="besp_9")
+
                 if st.button("💾 Aplicar Plantilla Manual a la Cancha", type="primary", use_container_width=True):
-                    # Reconstruir Equipo 1
                     nuevo_e1 = []
                     s1 = 0
                     for pos, val in [("PG", b_pg1), ("SG", b_sg1), ("SF", b_sf1), ("PF", b_pf1), ("C", b_c1)]:
@@ -407,29 +432,35 @@ else:
                             nuevo_e1.append((val, pos))
                             s1 += st.session_state.jugadores[val].get(pos, 0)
                             
-                    # Reconstruir Equipo 2
                     nuevo_e2 = []
                     s2 = 0
                     for pos, val in [("PG", b_pg2), ("SG", b_sg2), ("SF", b_sf2), ("PF", b_pf2), ("C", b_c2)]:
                         if val != "---":
                             nuevo_e2.append((val, pos))
                             s2 += st.session_state.jugadores[val].get(pos, 0)
+                    
+                    nuevo_banco = []
+                    for b_val in [b_esp1, b_esp2, b_esp3, b_esp4, b_esp5, b_esp6, b_esp7, b_esp8, b_esp9]:
+                        if b_val != "---" and b_val not in nuevo_banco:
+                            nuevo_banco.append(b_val)
                             
                     st.session_state.draft_manual["Equipo 1"] = nuevo_e1
                     st.session_state.draft_manual["Equipo 2"] = nuevo_e2
                     st.session_state.draft_manual["Suma 1"] = s1
                     st.session_state.draft_manual["Suma 2"] = s2
-                    st.success("¡Cancha actualizada a mano con éxito!")
+                    st.session_state.lista_espera_forzada = nuevo_banco
+                    
+                    st.success("¡Cancha y lista de espera actualizadas con éxito!")
                     st.rerun()
 
             st.write("---")
             if st.button("❌ Reiniciar Mesa Completa", type="secondary", use_container_width=True):
                 st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
+                st.session_state.lista_espera_forzada = []
                 st.rerun()
         else:
             st.warning("Herramientas bloqueadas para Espectadores.")
 
-        # Lista de Espera abajo de las herramientas (Centro)
         st.write("---")
         st.subheader("📋 Lista de Espera")
         if lista_espera:
@@ -440,12 +471,16 @@ else:
             st.caption("No hay nadie esperando en el banco actualmente.")
 
     # -----------------------------------------------------------------
-    # COLUMNA 3: CONTROL DE LA CANCHA Y DISCORD (DERECHA)
+    # COLUMNA 3: CONTROL DE LA CANCHA Y ACCIÓN DE CAPTURA (DERECHA)
     # -----------------------------------------------------------------
     with col_derecha:
         st.header("🔥 Control de la Cancha")
         
-        with st.container(height=340, border=True):
+        # Envolvemos la tarjeta visual de la cancha en un contenedor HTML con una ID única para poder fotografiarlo
+        # Esto hace el rol exacto de un impPnt automático apuntado
+        st.markdown('<div id="zona-captura-cancha" style="background-color: #0e1117; padding: 5px; border-radius: 8px;">', unsafe_allow_html=True)
+        
+        with st.container(height=320, border=True):
             sub_col1, sub_col2 = st.columns(2)
             with sub_col1:
                 if ver_puntos:
@@ -475,19 +510,62 @@ else:
                         st.session_state.draft_manual["Equipo 2"].pop(idx)
                         st.rerun()
 
-        st.markdown(f"🔑 **Código de Emparejamiento Actual:** `{codigo_actual}`")
-
-        # Copiar a Discord compacto
-        dict_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
-        dict_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
+        st.markdown(f'🔑 **Código de Emparejamiento Actual:** `{codigo_actual}`', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True) # Cierre de la zona de captura
         
-        texto_plano = f"🔑 CÓDIGO DE PARTIDO: {codigo_actual}\n"
-        texto_plano += "POS | EQUIPO 1       | EQUIPO 2\n"
-        for pos in roles_totales:
-            p1 = dict_e1.get(pos, '---').ljust(14)
-            p2 = dict_e2.get(pos, '---')
-            texto_plano += f"{pos.ljust(3)} : {p1} vs {p2}\n"
-        st.code(texto_plano, language="text")
+        st.write("")
+        
+        # REQUERIMIENTO: Añadido botón interactivo tipo Screenshot automático. Elimina el cuadro de texto viejo.
+        html_boton_screenshot = f"""
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <button onclick="tomarFotoCancha()" style="
+            width: 100%; 
+            background-color: #2ecc71; 
+            color: white; 
+            border: none; 
+            padding: 10px; 
+            font-size: 15px; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            cursor: pointer;
+            box-shadow: 0px 3px 6px rgba(0,0,0,0.2);
+            margin-bottom: 15px;
+        ">📸 CAPTURAR CANCHA Y CÓDIGO (FOTO)</button>
+
+        <script>
+        function tomarFotoCancha() {{
+            // Buscamos la zona de la cancha dentro de la estructura de Streamlit
+            var contenedor completado = window.parent.document.getElementById("zona-captura-cancha") || window.parent.document.querySelector('[id*="zona-captura-cancha"]');
+            
+            if (!contenedor completado) {{
+                // Si está dentro de bloques dinámicos anidados, buscamos el bloque contenedor padre por proximidad
+                var todosLosDivs = window.parent.document.querySelectorAll('div');
+                for (var i = 0; i < todosLosDivs.length; i++) {{
+                    if (todosLosDivs[i].innerHTML.includes("Código de Emparejamiento Actual") && todosLosDivs[i].innerHTML.includes("🔵 Eq 1")) {{
+                        contenedor completado = todosLosDivs[i];
+                        break;
+                    }}
+                }}
+            }}
+
+            if (contenedor completado) {{
+                html2canvas(contenedor completado, {{
+                    backgroundColor: "#0e1117",
+                    scale: 2, // Aumenta la resolución para que no salga pixelado en Discord
+                    logging: false
+                }}).then(function(canvas) {{
+                    var link = document.createElement('a');
+                    link.download = 'Cancha_Match_{codigo_actual}.png';
+                    link.href = canvas.toDataURL("image/png");
+                    link.click();
+                }});
+            }} else {{
+                alert("No se pudo fijar el objetivo de captura automática. Intente usar ImpPnt clásico.");
+            }}
+        }}
+        </script>
+        """
+        components.html(html_boton_screenshot, height=65)
 
         # Registro del Marcador Final en vivo
         if es_admin_stream:
@@ -507,7 +585,6 @@ else:
                 })
                 guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
                 
-                # Identificar perdedor
                 if res_eq1 > res_eq2:
                     equipo_a_reemplazar = "Equipo 2"
                     equipo_fijo = "Equipo 1"
@@ -547,6 +624,7 @@ else:
                     st.session_state.draft_manual["Suma 1"] = suma_reemplazo
                     st.session_state.draft_manual["Suma 2"] = suma_fijo
                 
+                st.session_state.lista_espera_forzada = [] 
                 st.success("¡Partido guardado y equipos rotados con éxito!")
                 st.rerun()
 
