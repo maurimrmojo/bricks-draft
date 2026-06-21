@@ -149,50 +149,22 @@ if seccion_actual == "📋 Administración Total":
 else:
     st.title("🏀 Mesa de Draft a la Carta")
     
-    col_izquierda, col_centro, col_derecha = st.columns([1.2, 1.3, 1.3])
+    col_izquierda, col_centro, col_derecha = st.columns([1.3, 1.3, 1.3])
     
     # -----------------------------------------------------------------
-    # COLUMNA 1: CONVOCATORIA, ROLES Y LISTA DE ESPERA (IZQUIERDA)
+    # COLUMNA 1: CONVOCATORIA UNIFICADA Y LISTA DE ESPERA (IZQUIERDA)
     # -----------------------------------------------------------------
     with col_izquierda:
-        st.header("🎲 Convocatoria")
+        st.header("🎲 Convocatoria y Roles")
         presentes = []
-        if not st.session_state.jugadores:
-            st.warning("No hay jugadores cargados.")
-        else:
-            with st.container(height=230, border=True):
-                for j in sorted(st.session_state.jugadores.keys()):
-                    if es_admin_stream:
-                        if st.checkbox(f"✔️ {j}", key=f"p_{j}"): presentes.append(j)
-                    else:
-                        if st.checkbox(f"✔️ {j}", key=f"p_{j}", disabled=True): presentes.append(j)
-            st.write(f"**Conectados:** {len(presentes)} jugadores.")
-        
-        # Identificar quiénes ya están jugando en cancha o forzados en lista de espera manual
-        ya_drafteados = [j[0] for j in st.session_state.draft_manual["Equipo 1"]] + [j[0] for j in st.session_state.draft_manual["Equipo 2"]]
-        
-        if st.session_state.lista_espera_forzada:
-            lista_espera = st.session_state.lista_espera_forzada
-        else:
-            lista_espera = [j for j in presentes if j not in ya_drafteados]
-        
-        # REQUERIMIENTO: Mover Lista de Espera al costado izquierdo abajo de la convocatoria
-        st.write("---")
-        st.subheader("📋 Lista de Espera")
-        if lista_espera:
-            with st.container(height=180, border=True):
-                for esp in lista_espera:
-                    st.write(f"⏳ **{esp}**")
-        else:
-            st.caption("No hay nadie esperando en el banco actualmente.")
-        
-        # Ajuste de Roles hoy abajo de Lista de Espera
         jugadores_fecha_perfiles = {}
-        if presentes:
-            st.write("---")
-            st.subheader("🛠️ Ajuste de Roles hoy")
-            with st.container(height=250, border=True):
-                for jug in sorted(presentes):
+        
+        if not st.session_state.jugadores:
+            st.warning("No hay jugadores cargados en el roster.")
+        else:
+            # Contenedor único para activar roles. Si tilda al menos un rol, se considera Convocado.
+            with st.container(height=380, border=True):
+                for jug in sorted(st.session_state.jugadores.keys()):
                     st.markdown(f"**⛹️‍♂️ {jug}**")
                     pos_originales = list(st.session_state.jugadores[jug].keys())
                     roles_activos_hoy = []
@@ -201,14 +173,36 @@ else:
                     for idx_pos, pos in enumerate(pos_originales):
                         with sub_cols[idx_pos]:
                             if es_admin_stream:
-                                if st.checkbox(pos, value=True, key=f"rol_{jug}_{pos}"): roles_activos_hoy.append(pos)
+                                # Inicia desactivado. Al marcar un rol, pasa a estar convocado con ese rol activo.
+                                if st.checkbox(pos, value=False, key=f"rol_{jug}_{pos}"): 
+                                    roles_activos_hoy.append(pos)
                             else:
-                                if st.checkbox(pos, value=True, key=f"rol_{jug}_{pos}", disabled=True): roles_activos_hoy.append(pos)
+                                if st.checkbox(pos, value=False, key=f"rol_{jug}_{pos}", disabled=True): 
+                                    roles_activos_hoy.append(pos)
                     
                     if roles_activos_hoy:
+                        presentes.append(jug)
                         jugadores_fecha_perfiles[jug] = {p: st.session_state.jugadores[jug][p] for p in roles_activos_hoy}
-                    else:
-                        jugadores_fecha_perfiles[jug] = st.session_state.jugadores[jug]
+            
+            st.write(f"**Conectados (con roles):** {len(presentes)} jugadores.")
+        
+        # Identificar quiénes ya están jugando en cancha
+        ya_drafteados = [j[0] for j in st.session_state.draft_manual["Equipo 1"]] + [j[0] for j in st.session_state.draft_manual["Equipo 2"]]
+        
+        # Construcción automática de la lista de espera
+        if st.session_state.lista_espera_forzada:
+            lista_espera = st.session_state.lista_espera_forzada
+        else:
+            lista_espera = [j for j in presentes if j not in ya_drafteados]
+        
+        st.write("---")
+        st.subheader("📋 Lista de Espera")
+        if lista_espera:
+            with st.container(height=180, border=True):
+                for esp in lista_espera:
+                    st.write(f"⏳ **{esp}**")
+        else:
+            st.caption("No hay nadie esperando en el banco actualmente.")
 
     roles_totales = ["PG", "SG", "SF", "PF", "C"]
     libres_hoy = [j for j in presentes if j not in ya_drafteados]
@@ -231,7 +225,7 @@ else:
                 else:
                     if st.button("🚀 Ejecutar Algoritmo de Sorteo", type="primary", use_container_width=True):
                         if len(presentes) < 10:
-                            st.warning("Se necesitan mínimo 10 jugadores.")
+                            st.warning("Se necesitan mínimo 10 jugadores con roles asignados.")
                         else:
                             st.session_state.lista_espera_forzada = [] 
                             pool = presentes.copy()
@@ -279,7 +273,7 @@ else:
                                 st.success("¡Equipos armados y balanceados!")
                                 st.rerun()
                             else:
-                                st.error("Roster trabado. Habilita más posiciones dinámicas.")
+                                st.error("Roster trabado. Habilita más posiciones dinámicas en la convocatoria.")
 
             with pestana2:
                 posicion_a_sortear = st.selectbox("Posición a sortear:", roles_totales)
@@ -388,8 +382,8 @@ else:
                     st.markdown("🔒 *No hay candidatos válidos libres.*")
 
             with pestana3:
-                st.markdown("✍️ **Escribí o buscá para armar los quintetos completos:**")
-                opciones_busqueda = ["---"] + sorted(list(st.session_state.jugadores.keys()))
+                st.markdown("✍px **Escribí o buscá para armar los quintetos completos:**")
+                opciones_busqueda = ["---"] + presentes
                 
                 dict_actual_e1 = {r: j for j, r in st.session_state.draft_manual["Equipo 1"]}
                 dict_actual_e2 = {r: j for j, r in st.session_state.draft_manual["Equipo 2"]}
@@ -398,26 +392,24 @@ else:
                 
                 with c_man_e1:
                     st.markdown("🔵 **Equipo 1**")
-                    b_pg1 = st.selectbox("PG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("PG", "---")), key="bm_pg1")
-                    b_sg1 = st.selectbox("SG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("SG", "---")), key="bm_sg1")
-                    b_sf1 = st.selectbox("SF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("SF", "---")), key="bm_sf1")
-                    b_pf1 = st.selectbox("PF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("PF", "---")), key="bm_pf1")
-                    b_c1  = st.selectbox("C:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("C", "---")), key="bm_c1")
+                    b_pg1 = st.selectbox("PG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("PG", "---")) if dict_actual_e1.get("PG", "---") in opciones_busqueda else 0, key="bm_pg1")
+                    b_sg1 = st.selectbox("SG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("SG", "---")) if dict_actual_e1.get("SG", "---") in opciones_busqueda else 0, key="bm_sg1")
+                    b_sf1 = st.selectbox("SF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("SF", "---")) if dict_actual_e1.get("SF", "---") in opciones_busqueda else 0, key="bm_sf1")
+                    b_pf1 = st.selectbox("PF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("PF", "---")) if dict_actual_e1.get("PF", "---") in opciones_busqueda else 0, key="bm_pf1")
+                    b_c1  = st.selectbox("C:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e1.get("C", "---")) if dict_actual_e1.get("C", "---") in opciones_busqueda else 0, key="bm_c1")
                     
                 with c_man_e2:
                     st.markdown("🔴 **Equipo 2**")
-                    b_pg2 = st.selectbox("PG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("PG", "---")), key="bm_pg2")
-                    b_sg2 = st.selectbox("SG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("SG", "---")), key="bm_sg2")
-                    b_sf2 = st.selectbox("SF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("SF", "---")), key="bm_sf2")
-                    b_pf2 = st.selectbox("PF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("PF", "---")), key="bm_pf2")
-                    b_c2  = st.selectbox("C:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("C", "---")), key="bm_c2")
+                    b_pg2 = st.selectbox("PG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("PG", "---")) if dict_actual_e2.get("PG", "---") in opciones_busqueda else 0, key="bm_pg2")
+                    b_sg2 = st.selectbox("SG:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("SG", "---")) if dict_actual_e2.get("SG", "---") in opciones_busqueda else 0, key="bm_sg2")
+                    b_sf2 = st.selectbox("SF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("SF", "---")) if dict_actual_e2.get("SF", "---") in opciones_busqueda else 0, key="bm_sf2")
+                    b_pf2 = st.selectbox("PF:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("PF", "---")) if dict_actual_e2.get("PF", "---") in opciones_busqueda else 0, key="bm_pf2")
+                    b_c2  = st.selectbox("C:", opciones_busqueda, index=opciones_busqueda.index(dict_actual_e2.get("C", "---")) if dict_actual_e2.get("C", "---") in opciones_busqueda else 0, key="bm_c2")
                 
-                # Pre-cargar valores existentes del banco por si ya posee datos
                 banco_actual = st.session_state.lista_espera_forzada
                 while len(banco_actual) < 9:
                     banco_actual.append("---")
 
-                # REQUERIMIENTO: Botón de aplicar plantilla reposicionado inmediatamente abajo de los quintetos
                 st.write("")
                 if st.button("💾 Aplicar Plantilla Manual a la Cancha", type="primary", use_container_width=True):
                     nuevo_e1 = []
@@ -434,8 +426,6 @@ else:
                             nuevo_e2.append((val, pos))
                             s2 += st.session_state.jugadores[val].get(pos, 0)
                     
-                    # El botón también procesa y guarda el estado actual de los selectboxes del banco inferior
-                    # Recuperamos los valores de los selectboxes leyendo el session_state dinámico
                     nuevo_banco = []
                     for i in range(1, 10):
                         b_val = st.session_state.get(f"besp_{i}", "---")
@@ -444,7 +434,6 @@ else:
                             
                     st.session_state.draft_manual["Equipo 1"] = nuevo_e1
                     st.session_state.draft_manual["Equipo 2"] = nuevo_e2
-                    st.session_state.bytes_s1 = s1
                     st.session_state.draft_manual["Suma 1"] = s1
                     st.session_state.draft_manual["Suma 2"] = s2
                     st.session_state.lista_espera_forzada = nuevo_banco
@@ -452,7 +441,6 @@ else:
                     st.success("¡Cancha y lista de espera actualizadas con éxito!")
                     st.rerun()
 
-                # REQUERIMIENTO: Los campos de banco manual se ubican en la parte inferior de la pestaña
                 st.write("---")
                 st.markdown("📋 **Gestión Manual de Lista de Espera (Máx 9 campos):**")
                 
