@@ -38,7 +38,7 @@ if "historial_partidos" not in st.session_state: st.session_state.historial_part
 if "draft_manual" not in st.session_state: st.session_state.draft_manual = {"Equipo 1": [], "Equipo 2": [], "Suma 1": 0, "Suma 2": 0}
 if "lista_espera_forzada" not in st.session_state: st.session_state.lista_espera_forzada = []
 
-# NUEVO: Contador independiente para los códigos diarios
+# Contador independiente para los códigos diarios
 if "contador_codigo_dia" not in st.session_state: st.session_state.contador_codigo_dia = 0
 
 cant_partidos = len(st.session_state.historial_partidos)
@@ -72,7 +72,7 @@ if st.sidebar.button("🔄 Sincronizar Datos", use_container_width=True):
     st.session_state.historial_partidos = datos_actualizados["historial_partidos"]
     st.rerun()
 
-# NUEVO: Botón para reiniciar la secuencia de códigos diarios
+# Botón para reiniciar la secuencia de códigos diarios
 if st.sidebar.button("♻️ Reiniciar Códigos (Nuevo Día)", type="primary", use_container_width=True):
     st.session_state.contador_codigo_dia = 0
     st.toast("¡Secuencia de códigos reseteada a 1q2w!", icon="✅")
@@ -122,61 +122,65 @@ equipos_listos = (len(st.session_state.draft_manual["Equipo 1"]) == 5 and len(st
 # =====================================================================
 if seccion_actual == "📋 Administración Total":
     st.title("⚙️ Panel de Control — Super Admin")
-    tab_roster, tab_historial = st.tabs(["👤 Gestión Roster", "🚨 Gestión Historial"])
+    # CORRECCIÓN: Definimos las columnas para que col_derecha exista y no rompa la app
+    col_centro, col_derecha = st.columns([2.3, 1.3])
     
-    with tab_roster:
-        st.header("👤 Agregar / Borrar Jugadores")
-        col1, col2 = st.columns(2)
-        with col1:
-            nombre = st.text_input("Nombre del Jugador:").upper().strip()
-            pg = st.number_input("PG (Base)", 0, 99, 0)
-            sg = st.number_input("SG (Escolta)", 0, 99, 0)
-            sf = st.number_input("SF (Alero)", 0, 99, 0)
-            pf = st.number_input("PF (Ala-Pívot)", 0, 99, 0)
-            c = st.number_input("C (Pívot)", 0, 99, 0)
-            if st.button("💾 Guardar Jugador permanentemente", use_container_width=True):
-                if nombre:
-                    st.session_state.jugadores[nombre] = {"PG":pg,"SG":sg,"SF":sf,"PF":pf,"C":c}
-                    guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                    st.success(f"¡{nombre} guardado!")
-                    st.rerun()
-        with col2:
-            st.write("📋 Jugadores actuales en el Roster:")
-            for j in sorted(list(st.session_state.jugadores.keys())):
-                puntos = st.session_state.jugadores[j]
-                with st.container(border=True):
-                    c_info, c_action = st.columns([3, 1])
-                    with c_info:
-                        st.markdown(f"### 🪪 {j}")
-                        st.code(f"PG: {puntos.get('PG', 0)} | SG: {puntos.get('SG', 0)} | SF: {puntos.get('SF', 0)} | PF: {puntos.get('PF', 0)} | C: {puntos.get('C', 0)}", language="text")
-                    with c_action:
-                        st.write("") 
-                        if st.button("🗑️ Eliminar", key=f"del_{j}", use_container_width=True, type="primary"):
-                            del st.session_state.jugadores[j]
-                            guardar_datos_globales(st.session_state.historial_partidos, st.session_state.historial_partidos)
-                            st.rerun()
+    with col_centro:
+        tab_roster, tab_historial = st.tabs(["👤 Gestión Roster", "🚨 Gestión Historial"])
+        
+        with tab_roster:
+            st.header("👤 Agregar / Borrar Jugadores")
+            col1, col2 = st.columns(2)
+            with col1:
+                nombre = st.text_input("Nombre del Jugador:").upper().strip()
+                pg = st.number_input("PG (Base)", 0, 99, 0)
+                sg = st.number_input("SG (Escolta)", 0, 99, 0)
+                sf = st.number_input("SF (Alero)", 0, 99, 0)
+                pf = st.number_input("PF (Ala-Pívot)", 0, 99, 0)
+                c = st.number_input("C (Pívot)", 0, 99, 0)
+                if st.button("💾 Guardar Jugador permanentemente", use_container_width=True):
+                    if nombre:
+                        st.session_state.jugadores[nombre] = {"PG":pg,"SG":sg,"SF":sf,"PF":pf,"C":c}
+                        guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                        st.success(f"¡{nombre} guardado!")
+                        st.rerun()
+            with col2:
+                st.write("📋 Jugadores actuales en el Roster:")
+                for j in sorted(list(st.session_state.jugadores.keys())):
+                    puntos = st.session_state.jugadores[j]
+                    with st.container(border=True):
+                        c_info, c_action = st.columns([3, 1])
+                        with c_info:
+                            st.markdown(f"### 🪪 {j}")
+                            st.code(f"PG: {puntos.get('PG', 0)} | SG: {puntos.get('SG', 0)} | SF: {puntos.get('SF', 0)} | PF: {puntos.get('PF', 0)} | C: {puntos.get('C', 0)}", language="text")
+                        with c_action:
+                            st.write("") 
+                            if st.button("🗑️ Eliminar", key=f"del_{j}", use_container_width=True, type="primary"):
+                                del st.session_state.jugadores[j]
+                                guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                                st.rerun()
 
-    with tab_historial:
-        st.header("🚨 Gestión de Partidos (Filtro Anti-Troll)")
-        if st.session_state.historial_partidos:
-            opciones = [f"#{i+1}: {p['Equipos']} | {p['Resultado']}" for i, p in enumerate(st.session_state.historial_partidos)]
-            idx_elegido = st.selectbox("Seleccionar partido para auditar o borrar:", range(len(opciones)), format_func=lambda x: opciones[x])
-            c_del, c_edit = st.columns(2)
-            if c_del.button("💥 BORRAR ESTE PARTIDO POR COMPLETO", type="primary", use_container_width=True):
-                st.session_state.historial_partidos.pop(idx_elegido)
-                guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                st.warning("Partido removido del historial.")
-                st.rerun()
-            with c_edit.expander("✏️ Editar Marcador de este Partido"):
-                n_res1 = st.number_input("Nuevo Score Eq 1", value=0, key="adm_score_1")
-                n_res2 = st.number_input("Nuevo Score Eq 2", value=0, key="adm_score_2")
-                if st.button("Aplicar Corrección Forzada", use_container_width=True):
-                    st.session_state.historial_partidos[idx_elegido]["Resultado"] = f"{n_res1} - {n_res2}"
+        with tab_historial:
+            st.header("🚨 Gestión de Partidos (Filtro Anti-Troll)")
+            if st.session_state.historial_partidos:
+                opciones = [f"#{i+1}: {p['Equipos']} | {p['Resultado']}" for i, p in enumerate(st.session_state.historial_partidos)]
+                idx_elegido = st.selectbox("Seleccionar partido para auditar o borrar:", range(len(opciones)), format_func=lambda x: opciones[x])
+                c_del, c_edit = st.columns(2)
+                if c_del.button("💥 BORRAR ESTE PARTIDO POR COMPLETO", type="primary", use_container_width=True):
+                    st.session_state.historial_partidos.pop(idx_elegido)
                     guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
-                    st.success("¡Marcador actualizado!")
+                    st.warning("Partido removido del historial.")
                     st.rerun()
-        else:
-            st.info("No hay partidos registrados en la base de datos.")
+                with c_edit.expander("✏️ Editar Marcador de este Partido"):
+                    n_res1 = st.number_input("Nuevo Score Eq 1", value=0, key="adm_score_1")
+                    n_res2 = st.number_input("Nuevo Score Eq 2", value=0, key="adm_score_2")
+                    if st.button("Aplicar Corrección Forzada", use_container_width=True):
+                        st.session_state.historial_partidos[idx_elegido]["Resultado"] = f"{n_res1} - {n_res2}"
+                        guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
+                        st.success("¡Marcador actualizado!")
+                        st.rerun()
+            else:
+                st.info("No hay partidos registrados en la base de datos.")
 
 # =====================================================================
 # VENTANA: MESA DE DRAFT (CONFIGURACIÓN DINÁMICA DE COLUMNAS)
@@ -585,7 +589,7 @@ with col_derecha:
             })
             guardar_datos_globales(st.session_state.jugadores, st.session_state.historial_partidos)
             
-            # NUEVO: Avanza al siguiente código de la lista para el próximo partido
+            # Avanza al siguiente código de la lista para el próximo partido
             st.session_state.contador_codigo_dia += 1
             
             if res_eq1 > res_eq2:
