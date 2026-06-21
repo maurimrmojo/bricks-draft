@@ -512,7 +512,7 @@ with col_derecha:
         cursor: pointer;
         box-shadow: 0px 4px 8px rgba(0,0,0,0.4);
         margin-bottom: 10px;
-    ">📸 CAPTURAR CANCHA (FOTO PNG)</button>
+    ">📸 CAPTURAR EQUIPOS (no funciona)</button>
 
     <script>
     function ejecutarCapturaBrutal() {{
