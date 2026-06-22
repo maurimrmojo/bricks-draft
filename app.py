@@ -408,7 +408,7 @@ elif seccion_actual == "✍️ Armado 100% a Mano":
 
 else:
     # MODO JUEGO REGULAR / ESPECTADOR DE DRAFT
-    st.title("🏀 Mesa de Draft a la Carta")
+    st.title("🏀 Draft a la Carta")
     col_izquierda, col_centro, col_derecha = st.columns([1.1, 1.4, 1.1])
     
     with col_izquierda:
