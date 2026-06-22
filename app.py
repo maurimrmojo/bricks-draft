@@ -75,7 +75,7 @@ es_super_admin = (password_ingresada == PASSWORD_MAESTRA)
 
 ver_puntos = False
 if es_super_admin: 
-    st.sidebar.success("👑 MODO-GREY Activo")
+    st.sidebar.success("👑 MODO-GREY Activado")
     ver_puntos = st.sidebar.toggle("🔧 Mostrar puntos de jugadores", value=False)
 elif es_admin_stream: 
     st.sidebar.success("🔓 Streamer Activo")
