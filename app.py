@@ -223,7 +223,7 @@ elif seccion_actual == "📜 Historial de Partidos":
 # VENTANA: MESA DE DRAFT (ARMADO MANUAL)
 # =====================================================================
 elif seccion_actual == "✍️ Armado 100% a Mano":
-    st.title("🏀 Mesa de Draft (Armado Manual)")
+    st.title("🏀 Draft a la carta(Armado Manual)")
     
     # --- BLOQUE: CASILLEROS ESTILO EXCEL LIBRES ---
     with st.expander("📝 Borrador Rápido (Cuadrícula Estilo Excel Libre)", expanded=True):
