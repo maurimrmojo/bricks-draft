@@ -78,13 +78,13 @@ if es_super_admin:
     st.sidebar.success("👑 MODO-GREY Activado")
     ver_puntos = st.sidebar.toggle("🔧 Mostrar puntos de jugadores", value=False)
 elif es_admin_stream: 
-    st.sidebar.success("🔓 Streamer Activo")
+    st.sidebar.success("🔓 modo-organizador Activado")
     ver_puntos = st.sidebar.toggle("🔧 Mostrar puntos de jugadores", value=False)
 else: 
     st.sidebar.info("👁️ Modo Espectador")
 
 st.sidebar.write("---")
-if st.sidebar.button("🔄 Sincronizar Datos", use_container_width=True):
+if st.sidebar.button("🔄 refresh", use_container_width=True):
     st.cache_data.clear()
     datos_actualizados = cargar_datos_globales()
     st.session_state.jugadores = datos_actualizados["jugadores"]
