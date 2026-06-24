@@ -17,7 +17,7 @@ ocultar_menu = """
     </style>
 """
 st.markdown(ocultar_menu, unsafe_allow_html=True)
-# --- HASTA AQUÍ ---
+# 
 
 # Configuración de la página web (Forzamos diseño ancho)
 st.set_page_config(page_title="Draft a la carta", layout="wide")
@@ -25,7 +25,7 @@ st.set_page_config(page_title="Draft a la carta", layout="wide")
 # =====================================================================
 # CONFIGURACIÓN DE SEGURIDAD Y PERSISTENCIA
 # =====================================================================
-# Buscá esto y cambialo:
+
 PASSWORD_STREAM = st.secrets["PASSWORD_STREAM"]
 PASSWORD_MAESTRA = st.secrets["PASSWORD_MAESTRA"]
 ARCHIVO_BD = "datos_draft.json"
@@ -102,7 +102,7 @@ opciones_menu = []
 if es_super_admin:
     opciones_menu.append("📋 Administración Total")
 
-# Ponemos las herramientas de acuerdo al rol
+# herramientas de acuerdo al rol
 if es_admin_stream:
     opciones_menu.extend(["🎯 Sorteo Auto Balanced", "🎡 Ruleta Interactive", "✍️ Armado 100% a Mano"])
 else:
