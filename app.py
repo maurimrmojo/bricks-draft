@@ -19,7 +19,7 @@ ocultar_menu = """
 st.markdown(ocultar_menu, unsafe_allow_html=True)
 # 
 
-# Configuración de la página web (Forzamos diseño ancho)
+# Configuración de la página web 
 st.set_page_config(page_title="Draft a la carta", layout="wide")
 
 # =====================================================================
