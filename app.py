@@ -8,7 +8,7 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 
-# Esto sirve para esconder el menú de arriba y que nadie vea el código
+# 
 ocultar_menu = """
     <style>
     #MainMenu {visibility: hidden;}
